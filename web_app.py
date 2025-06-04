@@ -247,7 +247,7 @@ def dashboard():
     
     if db:
         try:
-            recent_articles = db.get_recent_articles(24)[:10]
+            recent_articles = db.get_recent_articles_for_dashboard(5)
             feed_analytics = db.get_feed_analytics()[:5]
             
             # Get recent broadcasts from database first
