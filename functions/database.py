@@ -121,10 +121,26 @@ class NewsDatabase:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT * FROM articles 
+            SELECT * FROM articles
             WHERE fetched_at > datetime('now', '-{} hours')
             AND processed = FALSE
         """.format(hours))
+        
+        columns = [description[0] for description in cursor.description]
+        articles = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        conn.close()
+        return articles
+    
+    def get_recent_articles_for_dashboard(self, limit: int = 5) -> List[Dict]:
+        """Get most recent articles for dashboard display (processed or not)"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, title, link, published_date, source_feed, fetched_at, processed
+            FROM articles
+            ORDER BY fetched_at DESC
+            LIMIT ?
+        """, (limit,))
         
         columns = [description[0] for description in cursor.description]
         articles = [dict(zip(columns, row)) for row in cursor.fetchall()]
