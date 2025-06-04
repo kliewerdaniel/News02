@@ -250,13 +250,13 @@ def dashboard():
             recent_articles = db.get_recent_articles(24)[:10]
             feed_analytics = db.get_feed_analytics()[:5]
             
-            # Get recent broadcasts (mock for now, would need to add to database.py)
+            # Get recent broadcasts from database first
             import sqlite3
             conn = sqlite3.connect(db.db_path)
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT * FROM broadcasts 
-                ORDER BY created_at DESC 
+                SELECT * FROM broadcasts
+                ORDER BY created_at DESC
                 LIMIT 5
             """)
             columns = [description[0] for description in cursor.description]
@@ -264,6 +264,26 @@ def dashboard():
             conn.close()
         except Exception as e:
             flash(f"Database error: {e}", 'error')
+    
+    # If no broadcasts in database, get from output folder
+    if not recent_broadcasts:
+        from pathlib import Path
+        output_dir = Path('output')
+        if output_dir.exists():
+            # Get all mp3 files and create broadcast entries
+            mp3_files = sorted(output_dir.glob('digest_*.mp3'), key=lambda x: x.stat().st_mtime, reverse=True)
+            recent_broadcasts = []
+            for mp3_file in mp3_files[:5]:  # Get last 5
+                # Get corresponding markdown file
+                md_file = mp3_file.with_suffix('.md')
+                if md_file.exists():
+                    recent_broadcasts.append({
+                        'created_at': datetime.fromtimestamp(mp3_file.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S'),
+                        'audio_path': str(mp3_file),
+                        'file_path': str(md_file),
+                        'model_used': 'File-based',
+                        'article_count': 'N/A'  # Could parse from file if needed
+                    })
     
     return render_template('dashboard.html',
                          recent_articles=recent_articles,
@@ -764,12 +784,24 @@ def api_analytics():
         articles_today_count = cursor.fetchone()[0]
         
         conn.close()
+        
+        # Count actual broadcast files (mp3s) in output folder
+        broadcast_count = 0
+        try:
+            from pathlib import Path
+            output_dir = Path('output')
+            if output_dir.exists():
+                mp3_files = list(output_dir.glob('digest_*.mp3'))
+                broadcast_count = len(mp3_files)
+        except Exception as e:
+            print(f"Error counting broadcast files: {e}")
 
         return jsonify({
             'feed_analytics': feed_analytics,
             'daily_counts': daily_counts,
             'model_stats': model_stats,
-            'articles_today': articles_today_count
+            'articles_today': articles_today_count,
+            'broadcast_count': broadcast_count
         })
         
     except Exception as e:
