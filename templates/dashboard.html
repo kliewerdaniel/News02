@@ -43,7 +43,7 @@
                 <div class="d-flex justify-content-between">
                     <div>
                         <h5 class="card-title">Broadcasts</h5>
-                        <h2 class="mb-0">{{ recent_broadcasts|length }}</h2>
+                        <h2 class="mb-0" id="broadcastCount">{{ recent_broadcasts|length }}</h2>
                     </div>
                     <div class="align-self-center">
                         <i class="bi bi-broadcast fs-1"></i>
@@ -239,6 +239,11 @@ function initializeCharts() {
             // Update Articles Today count
             if (data.articles_today !== undefined) {
                 document.getElementById('articlesTodayCount').innerText = data.articles_today;
+            }
+            
+            // Update Broadcast count
+            if (data.broadcast_count !== undefined) {
+                document.getElementById('broadcastCount').innerText = data.broadcast_count;
             }
 
             if (data.daily_counts) {
