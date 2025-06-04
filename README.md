@@ -17,7 +17,8 @@ Get up and running in minutes with automatic setup:
 
 This will:
 - ✅ Create virtual environment
-- ✅ Install all dependencies  
+- ✅ Install all dependencies
+- ✅ Clone RSS feed discovery database (300+ feeds)
 - ✅ Set up configuration files
 - ✅ Test installation
 - ✅ Show you exactly how to run the web GUI
@@ -102,6 +103,15 @@ python run_web.py
 - **Rate Limiting** - Configure intelligent API management
 - **Model Configuration** - Visual model selection and testing
 - **Database Management** - Reset, cleanup, and nuclear options
+
+### 🔍 RSS Feed Discovery Tool
+- **300+ Curated Feeds** - Automatically cloned from awesome-rss-feeds repository
+- **Smart Search** - Find feeds by topic, keyword, or category
+- **English-Only Filter** - Focus on quality English-language sources
+- **Country-Based Categories** - Browse feeds by country (US, UK, Canada, etc.)
+- **Topic Categories** - Technology, News, Programming, Business, Science, and more
+- **One-Click Adding** - Test and add feeds directly to your list
+- **Live Feed Testing** - Verify feeds work before adding them
 
 ### Feed Management
 - **Reliability Testing** - Test individual feeds before adding
@@ -201,13 +211,17 @@ News02/
 │   ├── templates/              # Professional HTML templates
 │   │   ├── lounge.html         # News consumption interface
 │   │   ├── dashboard.html      # Real-time monitoring
+│   │   ├── feeds.html          # Feed discovery & management
 │   │   └── settings.html       # Configuration management
 │   └── static/                 # Modern CSS, JS, images
 ├── 🤖 Enhanced Core System
 │   ├── news_digest_enhanced.py # Professional broadcast generation
 │   ├── llm_client.py          # Multi-provider with rate limiting
 │   ├── config_manager.py       # Advanced configuration handling
-│   └── database.py            # Enhanced SQLite integration
+│   ├── database.py            # Enhanced SQLite integration
+│   └── feed_discovery.py      # RSS feed discovery engine
+├── 🔍 Feed Discovery Database
+│   └── awesome-rss-feeds/     # 300+ curated feeds (auto-cloned)
 ├── ⚙️ Smart Configuration
 │   ├── .env                   # Environment variables
 │   ├── feeds.yaml             # Curated reliable RSS feeds
@@ -218,14 +232,29 @@ News02/
     └── news_cli.py            # Enhanced command-line utilities
 ```
 
+## 📚 Documentation
+
+- **[📖 Setup Guide](README_SETUP.md)** - Detailed installation instructions
+- **[🌐 Web Interface](README_WEB.md)** - Web dashboard documentation  
+- **[🔧 Enhanced Features](README_ENHANCED.md)** - Advanced configuration
+- **[⚡ Architecture](flow.md)** - Technical implementation details
+
 ## 🎯 Professional Workflow
 
 1. **Setup** - Run quick setup script for automatic configuration
 2. **Configure** - Set LLM provider with live connection testing
-3. **Manage Feeds** - Add reliable RSS feeds with validation
-4. **Generate** - Click "Generate Digest" and monitor real-time progress
-5. **Experience** - Professional lounge with audio playback and source tracking
-6. **Manage** - Database tools for maintenance and optimization
+3. **Discover Feeds** - Browse 300+ curated feeds or search by topic/country
+4. **Manage Feeds** - Add reliable RSS feeds with validation
+5. **Generate** - Click "Generate Digest" and monitor real-time progress
+6. **Experience** - Professional lounge with audio playback and source tracking
+7. **Manage** - Database tools for maintenance and optimization
+
+### 🔍 Feed Discovery Workflow
+1. **Browse Categories** - Click "English Only" for quality sources or explore by topic
+2. **Search & Filter** - Use keywords like "tech", "news", or select specific countries
+3. **Test Feeds** - Verify feeds work before adding with built-in testing
+4. **One-Click Add** - Instantly add working feeds to your collection
+5. **Generate Digest** - Use your curated feed collection for personalized news
 
 ## 💡 Professional Use Cases
 
@@ -292,6 +321,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## 🙏 Acknowledgments
 
+- **awesome-rss-feeds** - Curated RSS feed collection by plenaryapp
 - **Ollama** - Local LLM inference platform
 - **OpenAI** - API standards and models
 - **Google** - Gemini AI integration
