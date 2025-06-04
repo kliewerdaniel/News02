@@ -1,3 +1,8 @@
+<img src="https://github.com/user-attachments/assets/d38d03a3-6a7d-4617-b09c-103421e89cf9" width="49%"> <img src="https://github.com/user-attachments/assets/13e20837-117a-4a53-b8b5-0ca511b42009" width="49%">
+
+![Screenshot_20250604_154206](https://github.com/user-attachments/assets/5b824481-329d-40fa-815b-ee3855994a4b)
+
+
 # 📰 News02 - Professional AI News Digest System
 
 Transform RSS feeds into personalized AI-generated news digests with professional audio narration and comprehensive source tracking. Supports multiple LLM providers with intelligent rate limiting.
