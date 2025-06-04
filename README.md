@@ -24,78 +24,83 @@ TTS_VOICE = "en-US-GuyNeural"               # Microsoft Edge TTS voice
 # ===========================
 ```
 
-⸻
+---
 
-📦 Installation
-	1.	Clone this repository:
+## 📦 Installation
 
-git clone https://github.com/kliewerdaniel/news02.git
-cd news02
+1. **Clone this repository:**
+   ```bash
+   git clone https://github.com/kliewerdaniel/news02.git
+   cd news02
+   ```
 
+2. **Install dependencies:**
+   Make sure you have Python 3.8+ and install the required packages:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-	2.	Install dependencies:
-Make sure you have Python 3.8+ and install the required packages:
+3. **Install Ollama (if not already):**
+   Follow setup instructions at https://ollama.com
 
-pip install -r requirements.txt
+---
 
+## 📄 feeds.yaml Example
 
-	3.	Install Ollama (if not already):
-Follow setup instructions at https://ollama.com
+Create a file called `feeds.yaml` in the project root:
 
-⸻
-
-📄 feeds.yaml Example
-
-Create a file called feeds.yaml in the project root:
-
+```yaml
 feeds:
   - https://rss.nytimes.com/services/xml/rss/nyt/World.xml
   - https://feeds.bbci.co.uk/news/rss.xml
+```
 
+---
 
-⸻
+## 🚀 Running the Script
 
-🚀 Running the Script
-
+```bash
 python your_script_name.py
+```
 
 The script will:
-	•	Fetch one article per feed
-	•	Summarize each
-	•	Generate a full news digest
-	•	Save the digest as digest_YYYY-MM-DD_HH-MM-SS.md
-	•	Save an audio file as digest_YYYY-MM-DD_HH-MM-SS.mp3
+- Fetch one article per feed
+- Summarize each
+- Generate a full news digest
+- Save the digest as `digest_YYYY-MM-DD_HH-MM-SS.md`
+- Save an audio file as `digest_YYYY-MM-DD_HH-MM-SS.mp3`
 
-⸻
+---
 
-🗣️ Voice Options
+## 🗣️ Voice Options
 
-You can change the voice used for TTS by editing the TTS_VOICE variable. Supported voices include:
-	•	en-US-GuyNeural (default, male)
-	•	en-US-JennyNeural (female)
-	•	en-GB-RyanNeural (UK male)
-	•	en-IN-PrabhatNeural (Indian English male)
+You can change the voice used for TTS by editing the `TTS_VOICE` variable. Supported voices include:
+- `en-US-GuyNeural` (default, male)
+- `en-US-JennyNeural` (female)
+- `en-GB-RyanNeural` (UK male)
+- `en-IN-PrabhatNeural` (Indian English male)
 
-See Edge TTS Voice List for more.
+See [Edge TTS Voice List](https://docs.microsoft.com/en-us/azure/cognitive-services/speech-service/language-support) for more.
 
-⸻
+---
 
-🧠 Customization Tips
-	•	Adjust max_articles in fetch_articles() to increase the number of articles per feed.
-	•	Modify the summarize_with_ollama() and generate_broadcast() prompts for a different tone or depth.
-	•	Swap SUMMARY_MODEL or BROADCAST_MODEL to use other Ollama-supported models like llama3, gemma, etc.
+## 🧠 Customization Tips
 
-⸻
+- Adjust `max_articles` in `fetch_articles()` to increase the number of articles per feed
+- Modify the `summarize_with_ollama()` and `generate_broadcast()` prompts for a different tone or depth
+- Swap `SUMMARY_MODEL` or `BROADCAST_MODEL` to use other Ollama-supported models like `llama3`, `gemma`, etc.
 
-📁 Output
-	•	Markdown news summary file
-	•	Matching MP3 file with TTS narration
+---
 
-Files are saved in the same directory by default. You can change output_dir in save_digest().
+## 📁 Output
 
-⸻
+- Markdown news summary file
+- Matching MP3 file with TTS narration
 
-🔒 License
+Files are saved in the same directory by default. You can change `output_dir` in `save_digest()`.
+
+---
+
+## 🔒 License
 
 MIT License
-
