@@ -84,6 +84,47 @@ def setup_ollama_models():
     
     return True
 
+def clone_feed_discovery_repo():
+    """Clone the awesome-rss-feeds repository for feed discovery"""
+    repo_url = "https://github.com/plenaryapp/awesome-rss-feeds.git"
+    repo_dir = "awesome-rss-feeds"
+    
+    print(f"\n📡 Setting up feed discovery database...")
+    
+    if Path(repo_dir).exists():
+        print(f"✅ Feed discovery database already exists")
+        
+        # Ask if they want to update it
+        update = input("Do you want to update the feed database? (y/n): ").lower().strip()
+        if update in ['y', 'yes']:
+            try:
+                print("🔄 Updating feed database...")
+                subprocess.check_call(["git", "pull"], cwd=repo_dir)
+                print("✅ Feed database updated successfully")
+            except subprocess.CalledProcessError as e:
+                print(f"⚠️  Failed to update feed database: {e}")
+                print("   Continuing with existing database...")
+        return True
+    
+    # Check if git is available
+    try:
+        subprocess.check_call(["git", "--version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print("❌ Git not found. Please install Git to enable feed discovery.")
+        print("   You can still use News02 without feed discovery.")
+        return False
+    
+    try:
+        print(f"📥 Cloning feed discovery database...")
+        subprocess.check_call(["git", "clone", repo_url, repo_dir])
+        print("✅ Feed discovery database cloned successfully")
+        print(f"   📊 This provides access to 300+ curated RSS feeds")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Failed to clone feed discovery database: {e}")
+        print("   You can still use News02 without feed discovery.")
+        return False
+
 def main():
     """Main setup function"""
     print("🚀 News02 Enhanced Setup")
@@ -109,6 +150,9 @@ def main():
     # Install dependencies
     if not install_dependencies():
         sys.exit(1)
+    
+    # Clone feed discovery repository
+    clone_feed_discovery_repo()
     
     # Setup Ollama (optional)
     print("\n🤖 Checking Ollama setup...")
