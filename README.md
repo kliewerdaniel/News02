@@ -213,13 +213,6 @@ News02/
     └── news_cli.py            # Enhanced command-line utilities
 ```
 
-## 📚 Documentation
-
-- **[📖 Setup Guide](README_SETUP.md)** - Detailed installation instructions
-- **[🌐 Web Interface](README_WEB.md)** - Web dashboard documentation  
-- **[🔧 Enhanced Features](README_ENHANCED.md)** - Advanced configuration
-- **[⚡ Architecture](flow.md)** - Technical implementation details
-
 ## 🎯 Professional Workflow
 
 1. **Setup** - Run quick setup script for automatic configuration
