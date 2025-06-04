@@ -118,7 +118,7 @@
             <div class="card-body">
                 {% if recent_articles %}
                     <div class="list-group list-group-flush">
-                        {% for article in recent_articles[:5] %}
+                        {% for article in recent_articles %}
                         <div class="list-group-item">
                             <div class="d-flex w-100 justify-content-between">
                                 <h6 class="mb-1">{{ article.title[:80] }}{% if article.title|length > 80 %}...{% endif %}</h6>
@@ -126,6 +126,11 @@
                             </div>
                             <p class="mb-1">
                                 <small class="text-muted">{{ article.source_feed.split('/')[-1] }}</small>
+                                {% if article.processed %}
+                                    <span class="badge bg-success ms-2">Processed</span>
+                                {% else %}
+                                    <span class="badge bg-warning ms-2">Pending</span>
+                                {% endif %}
                             </p>
                         </div>
                         {% endfor %}
