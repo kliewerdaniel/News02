@@ -27,16 +27,16 @@ TTS_VOICE = "en-US-GuyNeural"  # Microsoft Edge TTS voice
 
 📦 Installation
 	1.	Clone this repository:
-
+```bash
 git clone https://github.com/kliewerdaniel/news02.git
 cd news02
-
+```
 	2.	Install dependencies:
 
 Make sure you have Python 3.8+ and install the required packages:
-
+```bash
 pip install -r requirements.txt
-
+```
 	3.	Install Ollama (if not already):
 
 	•	Follow setup instructions at https://ollama.com
@@ -46,18 +46,18 @@ pip install -r requirements.txt
 📄 feeds.yaml Example
 
 Create a file called feeds.yaml in the project root:
-
+```yaml
 feeds:
   - https://rss.nytimes.com/services/xml/rss/nyt/World.xml
   - https://feeds.bbci.co.uk/news/rss.xml
-
+```
 
 ⸻
 
 🚀 Running the Script
-
+```bash
 python your_script_name.py
-
+```
 The script will:
 	•	Fetch one article per feed
 	•	Summarize each
