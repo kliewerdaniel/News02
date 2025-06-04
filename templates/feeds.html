@@ -131,6 +131,30 @@
                     </div>
                 </div>
 
+                <!-- Pagination Controls -->
+                <div id="feedPagination" style="display: none;">
+                    <nav aria-label="Feed pagination">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item" id="paginationPrev">
+                                <a class="page-link" href="#" onclick="changePage('prev')">
+                                    <i class="bi bi-chevron-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="page-item active" id="currentPageItem">
+                                <span class="page-link" id="currentPageSpan">1</span>
+                            </li>
+                            <li class="page-item" id="paginationNext">
+                                <a class="page-link" href="#" onclick="changePage('next')">
+                                    Next <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                    <div class="text-center text-muted">
+                        <small id="paginationInfo">Page 1 of 1 (0 feeds)</small>
+                    </div>
+                </div>
+
                 <!-- Loading Indicator -->
                 <div id="feedDiscoveryLoading" style="display: none;">
                     <div class="text-center py-4">
@@ -251,6 +275,15 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Feed Discovery Functions
+let currentPagination = {
+    page: 1,
+    per_page: 30,
+    total_pages: 1,
+    total_feeds: 0,
+    current_action: null,
+    current_params: {}
+};
+
 function initializeFeedDiscovery() {
     loadCategories();
     loadDiscoveryStats();
@@ -290,7 +323,7 @@ function loadDiscoveryStats() {
         .catch(error => console.error('Error loading stats:', error));
 }
 
-function searchFeeds() {
+function searchFeeds(page = 1) {
     const query = document.getElementById('feedSearchInput').value.trim();
     const category = document.getElementById('categoryFilter').value;
     
@@ -301,7 +334,13 @@ function searchFeeds() {
     
     showLoading(true);
     
+    currentPagination.current_action = 'search';
+    currentPagination.current_params = { query, category };
+    currentPagination.page = page;
+    
     const params = new URLSearchParams();
+    params.append('page', page);
+    params.append('per_page', currentPagination.per_page);
     if (query) params.append('q', query);
     if (category) params.append('category', category);
     
@@ -309,7 +348,16 @@ function searchFeeds() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                displayFeedResults(data.feeds, `Found ${data.count} feeds`);
+                let title = `Search results`;
+                if (query && category) {
+                    title += ` for "${query}" in ${category}`;
+                } else if (query) {
+                    title += ` for "${query}"`;
+                } else {
+                    title += ` in ${category}`;
+                }
+                displayFeedResults(data.feeds, title);
+                updatePagination(data.pagination);
             } else {
                 showFeedDiscoveryMessage('Error searching feeds: ' + data.error, 'danger');
             }
@@ -370,14 +418,19 @@ function loadPopularFeeds() {
         .finally(() => showLoading(false));
 }
 
-function loadEnglishFeeds() {
+function loadEnglishFeeds(page = 1) {
     showLoading(true);
     
-    fetch('/api/feed_discovery/english?limit=30')
+    currentPagination.current_action = 'english';
+    currentPagination.current_params = {};
+    currentPagination.page = page;
+    
+    fetch(`/api/feed_discovery/english?page=${page}&per_page=${currentPagination.per_page}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                displayFeedResults(data.feeds, `${data.count} English-language feeds`);
+                displayFeedResults(data.feeds, `English-language feeds`);
+                updatePagination(data.pagination);
                 
                 // Update category filter with English-only options
                 updateCategoryFilterForEnglish(data.categories);
@@ -413,6 +466,74 @@ function updateCategoryFilterForEnglish(englishCategories) {
         option.textContent = `${cat.display_name} (${cat.feed_count})`;
         select.appendChild(option);
     });
+}
+
+// Pagination Functions
+function updatePagination(pagination) {
+    currentPagination = { ...currentPagination, ...pagination };
+    
+    const paginationDiv = document.getElementById('feedPagination');
+    const prevBtn = document.getElementById('paginationPrev');
+    const nextBtn = document.getElementById('paginationNext');
+    const currentPageSpan = document.getElementById('currentPageSpan');
+    const paginationInfo = document.getElementById('paginationInfo');
+    
+    // Update current page display
+    currentPageSpan.textContent = pagination.page;
+    
+    // Update pagination info
+    paginationInfo.textContent = `Page ${pagination.page} of ${pagination.total_pages} (${pagination.total_feeds} feeds)`;
+    
+    // Show/hide previous button
+    if (pagination.has_prev) {
+        prevBtn.classList.remove('disabled');
+    } else {
+        prevBtn.classList.add('disabled');
+    }
+    
+    // Show/hide next button
+    if (pagination.has_next) {
+        nextBtn.classList.remove('disabled');
+    } else {
+        nextBtn.classList.add('disabled');
+    }
+    
+    // Show pagination if needed
+    if (pagination.total_pages > 1) {
+        paginationDiv.style.display = 'block';
+    } else {
+        paginationDiv.style.display = 'none';
+    }
+}
+
+function changePage(direction) {
+    let newPage = currentPagination.page;
+    
+    if (direction === 'prev' && currentPagination.has_prev) {
+        newPage = currentPagination.page - 1;
+    } else if (direction === 'next' && currentPagination.has_next) {
+        newPage = currentPagination.page + 1;
+    } else {
+        return; // Invalid direction or no more pages
+    }
+    
+    // Call the appropriate function based on current action
+    switch (currentPagination.current_action) {
+        case 'english':
+            loadEnglishFeeds(newPage);
+            break;
+        case 'search':
+            // Restore search parameters
+            document.getElementById('feedSearchInput').value = currentPagination.current_params.query || '';
+            document.getElementById('categoryFilter').value = currentPagination.current_params.category || '';
+            searchFeeds(newPage);
+            break;
+        case 'popular':
+            loadPopularFeeds(newPage);
+            break;
+        default:
+            console.warn('Unknown pagination action:', currentPagination.current_action);
+    }
 }
 
 function displayFeedResults(feeds, headerText) {
