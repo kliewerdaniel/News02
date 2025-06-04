@@ -24,6 +24,7 @@ from functions.news_digest_enhanced import (
 )
 from functions.news_cli import test_llm_connection, test_database
 from functions.feed_discovery import feed_discovery
+from functions.job_scheduler import job_scheduler
 
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'news02-secret-key-change-me')
@@ -1160,9 +1161,286 @@ def api_feed_discovery_english_categories():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+# RSS Profile Management
+@app.route('/api/rss_profiles', methods=['GET'])
+def api_get_rss_profiles():
+    """Get all RSS profiles"""
+    try:
+        profiles_file = Path('settings/feeds/profiles.yaml')
+        if profiles_file.exists():
+            with open(profiles_file, 'r') as f:
+                profiles = yaml.safe_load(f) or {}
+        else:
+            profiles = {}
+        
+        return jsonify({
+            'success': True,
+            'profiles': profiles
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/rss_profiles', methods=['POST'])
+def api_save_rss_profile():
+    """Save or update an RSS profile"""
+    try:
+        data = request.get_json()
+        profile_name = data.get('name', '').strip()
+        feeds = data.get('feeds', [])
+        description = data.get('description', '').strip()
+        
+        if not profile_name:
+            return jsonify({'success': False, 'error': 'Profile name is required'})
+        
+        if not feeds:
+            return jsonify({'success': False, 'error': 'At least one feed is required'})
+        
+        # Ensure profiles directory exists
+        profiles_dir = Path('settings/feeds')
+        profiles_dir.mkdir(parents=True, exist_ok=True)
+        
+        profiles_file = profiles_dir / 'profiles.yaml'
+        
+        # Load existing profiles
+        if profiles_file.exists():
+            with open(profiles_file, 'r') as f:
+                profiles = yaml.safe_load(f) or {}
+        else:
+            profiles = {}
+        
+        # Save the profile
+        profiles[profile_name] = {
+            'description': description,
+            'feeds': feeds,
+            'created_at': datetime.now().isoformat(),
+            'feed_count': len(feeds)
+        }
+        
+        # Write back to file
+        with open(profiles_file, 'w') as f:
+            yaml.dump(profiles, f, default_flow_style=False, sort_keys=True)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Profile "{profile_name}" saved successfully',
+            'profile': profiles[profile_name]
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/rss_profiles/<profile_name>', methods=['DELETE'])
+def api_delete_rss_profile(profile_name):
+    """Delete an RSS profile"""
+    try:
+        profiles_file = Path('settings/feeds/profiles.yaml')
+        
+        if not profiles_file.exists():
+            return jsonify({'success': False, 'error': 'No profiles found'})
+        
+        with open(profiles_file, 'r') as f:
+            profiles = yaml.safe_load(f) or {}
+        
+        if profile_name not in profiles:
+            return jsonify({'success': False, 'error': f'Profile "{profile_name}" not found'})
+        
+        del profiles[profile_name]
+        
+        with open(profiles_file, 'w') as f:
+            yaml.dump(profiles, f, default_flow_style=False, sort_keys=True)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Profile "{profile_name}" deleted successfully'
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/rss_profiles/<profile_name>/load', methods=['POST'])
+def api_load_rss_profile(profile_name):
+    """Load feeds from a profile into the current feed list"""
+    try:
+        profiles_file = Path('settings/feeds/profiles.yaml')
+        
+        if not profiles_file.exists():
+            return jsonify({'success': False, 'error': 'No profiles found'})
+        
+        with open(profiles_file, 'r') as f:
+            profiles = yaml.safe_load(f) or {}
+        
+        if profile_name not in profiles:
+            return jsonify({'success': False, 'error': f'Profile "{profile_name}" not found'})
+        
+        profile = profiles[profile_name]
+        feeds = profile.get('feeds', [])
+        
+        # Load feeds into the current feeds.yaml
+        feeds_file = Path('settings/feeds/feeds.yaml')
+        
+        # Create feeds directory if it doesn't exist
+        feeds_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Save feeds to feeds.yaml
+        feeds_config = {'feeds': feeds}
+        with open(feeds_file, 'w') as f:
+            yaml.dump(feeds_config, f, default_flow_style=False)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Loaded {len(feeds)} feeds from profile "{profile_name}"',
+            'feeds': feeds,
+            'profile': profile
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+# Jobs page and API routes
+@app.route('/jobs')
+def jobs():
+    """Scheduled jobs management page"""
+    return render_template('jobs.html')
+
+@app.route('/api/scheduled_jobs', methods=['GET'])
+def api_get_scheduled_jobs():
+    """Get all scheduled jobs"""
+    try:
+        jobs = job_scheduler.get_jobs()
+        return jsonify({
+            'success': True,
+            'jobs': jobs
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/scheduled_jobs', methods=['POST'])
+def api_create_scheduled_job():
+    """Create a new scheduled job"""
+    try:
+        job_data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['name', 'time', 'profile']
+        for field in required_fields:
+            if not job_data.get(field):
+                return jsonify({'success': False, 'error': f'Missing required field: {field}'})
+        
+        # Set defaults
+        job_data.setdefault('articles_per_feed', 1)
+        job_data.setdefault('summary_model', 'default_model')
+        job_data.setdefault('broadcast_model', 'broadcast_model')
+        job_data.setdefault('recurrence', 'once')
+        job_data.setdefault('enabled', True)
+        
+        job_id = job_scheduler.create_job(job_data)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Job "{job_data["name"]}" created successfully',
+            'job_id': job_id
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/scheduled_jobs/<job_id>', methods=['GET'])
+def api_get_scheduled_job(job_id):
+    """Get a specific scheduled job"""
+    try:
+        job = job_scheduler.get_job(job_id)
+        if job:
+            return jsonify({
+                'success': True,
+                'job': job
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Job not found'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/scheduled_jobs/<job_id>', methods=['DELETE'])
+def api_delete_scheduled_job(job_id):
+    """Delete a scheduled job"""
+    try:
+        success = job_scheduler.delete_job(job_id)
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Job deleted successfully'
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Job not found'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/scheduled_jobs/<job_id>/enable', methods=['POST'])
+def api_enable_scheduled_job(job_id):
+    """Enable a scheduled job"""
+    try:
+        success = job_scheduler.toggle_job(job_id, True)
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Job enabled successfully'
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Job not found'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/scheduled_jobs/<job_id>/disable', methods=['POST'])
+def api_disable_scheduled_job(job_id):
+    """Disable a scheduled job"""
+    try:
+        success = job_scheduler.toggle_job(job_id, False)
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Job disabled successfully'
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Job not found'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/scheduled_jobs/<job_id>/run', methods=['POST'])
+def api_run_scheduled_job(job_id):
+    """Run a job immediately"""
+    try:
+        success = job_scheduler.run_job_immediately(job_id)
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Job queued for immediate execution'
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Job not found or already in queue'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/job_status')
+def api_job_status():
+    """Get current job execution status"""
+    try:
+        status = job_scheduler.get_execution_status()
+        return jsonify({
+            'success': True,
+            **status
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 if __name__ == '__main__':
     # Ensure output directory exists
     os.makedirs('output', exist_ok=True)
     
+    # Start the job scheduler
+    job_scheduler.start_scheduler()
+    
     # Run the Flask app
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    try:
+        app.run(host='0.0.0.0', port=5000, debug=True)
+    finally:
+        # Stop the scheduler when the app shuts down
+        job_scheduler.stop_scheduler()
