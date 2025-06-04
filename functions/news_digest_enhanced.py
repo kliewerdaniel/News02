@@ -226,7 +226,7 @@ def generate_broadcast_with_llm(summaries: List[Dict[str, Any]],
     logger.info(f"Generated broadcast in {processing_time}ms using {model_config.model}")
     return result
 
-def save_digest(digest_text: str, output_dir: str = None, summaries: List[Dict[str, Any]] = None) -> str:
+def save_digest(digest_text: str, output_dir: str = None, summaries: List[Dict[str, Any]] = None, job_name: str = None) -> str:
     """Save full broadcast with timestamped filename and source metadata"""
     if output_dir is None:
         output_config = config_manager.get_output_config()
@@ -236,7 +236,15 @@ def save_digest(digest_text: str, output_dir: str = None, summaries: List[Dict[s
     os.makedirs(output_dir, exist_ok=True)
     
     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    filename = os.path.join(output_dir, f'digest_{timestamp}.md')
+    
+    # Use job name if provided, otherwise default to 'digest'
+    if job_name:
+        # Clean job name for filename
+        import re
+        clean_job_name = re.sub(r'[^\w\-_]', '_', job_name)
+        filename = os.path.join(output_dir, f'{clean_job_name}_{timestamp}.md')
+    else:
+        filename = os.path.join(output_dir, f'digest_{timestamp}.md')
     
     # Build sources section if summaries provided (as appendix metadata)
     sources_section = ""
