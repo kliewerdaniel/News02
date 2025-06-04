@@ -60,7 +60,7 @@ feeds:
 ## 🚀 Running the Script
 
 ```bash
-python your_script_name.py
+python news_digest.py
 ```
 
 The script will:
