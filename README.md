@@ -1,106 +1,305 @@
-# 📰 AI News Digest Generator
+# 📰 News02 - Professional AI News Digest System
 
-This Python script automatically fetches news articles from RSS feeds, summarizes them using a local LLM (via Ollama), writes a coherent broadcast-style script, and generates a text-to-speech (TTS) audio file of the broadcast.
+Transform RSS feeds into personalized AI-generated news digests with professional audio narration and comprehensive source tracking. Supports multiple LLM providers with intelligent rate limiting.
 
-## ✨ Features
+## 🚀 Quick Start
 
-- Pulls articles from any RSS feed (configurable via `feeds.yaml`)
-- Summarizes news using a local LLM (Ollama)
-- Generates a flowing, anchor-style news script
-- Converts the script into an MP3 audio broadcast using Microsoft Edge TTS
-- Saves both text and audio versions with timestamped filenames
+### Easy Setup (Recommended)
+Get up and running in minutes with automatic setup:
 
----
+**Windows:** Double-click `quick_setup.bat`  
+**Linux/Mac:** Run `./quick_setup.sh`
 
-## 🔧 Configurable Models
+This will:
+- ✅ Create virtual environment
+- ✅ Install all dependencies  
+- ✅ Set up configuration files
+- ✅ Test installation
+- ✅ Show you exactly how to run the web GUI
 
-You can easily modify which models or voices to use by changing these variables at the top of the script:
-
-```python
-# === CONFIGURABLE MODELS ===
-SUMMARY_MODEL = 'mistral:latest'            # For summarizing articles
-BROADCAST_MODEL = 'mistral-small:24b-instruct-2501-q8_0'  # For combining summaries into a narrative
-TTS_VOICE = "en-US-GuyNeural"               # Microsoft Edge TTS voice
-# ===========================
+### Manual Setup
+If you prefer manual control:
+```bash
+python auto_setup.py
 ```
 
----
+## 🌐 Web Dashboard
 
-## 📦 Installation
+After setup, launch the modern web interface:
+```bash
+# Activate virtual environment
+source venv/bin/activate  # Linux/Mac
+venv\Scripts\activate     # Windows
 
-1. **Clone this repository:**
-   ```bash
-   git clone https://github.com/kliewerdaniel/news02.git
-   cd news02
-   ```
+# Start web interface
+python run_web.py
 
-2. **Install dependencies:**
-   Make sure you have Python 3.8+ and install the required packages:
-   ```bash
-   pip install -r requirements.txt
-   ```
+# Open: http://127.0.0.1:5000
+```
 
-3. **Install Ollama (if not already):**
-   Follow setup instructions at https://ollama.com
+## ✨ Enhanced Features
 
----
+### 🤖 Multi-Provider LLM Support with Smart Rate Limiting
+- **Ollama** - Local inference (Mistral, Llama, etc.)
+- **OpenAI-Compatible** - vLLM, LocalAI, and other APIs
+- **Google Gemini** - Cloud-based AI with intelligent rate limiting for free tier
+- **Automatic Rate Management** - Prevents 429 errors with smart delays
 
-## 📄 feeds.yaml Example
+### 🌐 Professional Web Experience
+- **Real-time Dashboard** - Monitor generation progress with detailed statistics
+- **News Lounge** - Comfortable viewing and listening experience
+- **Feed Management** - Add, test, and organize RSS feeds with reliability testing
+- **Settings Panel** - Configure LLM providers with live connection testing
+- **Mobile Responsive** - Works perfectly on phones, tablets, desktops
 
-Create a file called `feeds.yaml` in the project root:
+### 🎧 News Lounge Experience
+- **Audio Player** - Full HTML5 controls with progress tracking
+- **Reading Mode** - Comfortable text viewing with typography optimization
+- **Full-Screen Modal** - Distraction-free reading experience
+- **Sources Modal** - Complete transparency with clickable article sources
+- **Download Options** - Save both text and audio content
 
+### 💾 Advanced Database Management
+- **SQLite Storage** - Persistent article and summary storage
+- **Real-time Analytics** - Feed performance and processing statistics
+- **Smart Deduplication** - Avoid processing duplicate articles
+- **History Tracking** - Browse past digests and summaries
+- **Database Tools** - Reset, cleanup, and nuclear wipe options
+
+### 🎵 Professional Audio Generation
+- **Text-to-Speech** - Multiple voice options via Microsoft Edge TTS
+- **News Anchor Style** - Professional broadcast format with transitions
+- **Audio Player** - Play generated content with full browser controls
+- **Download Options** - Save MP3 files locally
+
+### 📋 Complete Source Transparency
+- **Article Sources** - Individual article tracking with titles and URLs
+- **Source Statistics** - "X articles from Y sources" with accurate counts
+- **Clickable Sources** - Direct links to original articles
+- **Copy Functionality** - Easy URL copying for sharing and verification
+
+## 📊 Enhanced Web Dashboard
+
+### Dashboard
+- **Live Processing Monitor** - Real-time generation progress
+- **Article Statistics** - "📥 32 found, ✅ 28 processed, ❌ 4 failed"
+- **Feed Analytics** - Performance charts and success rates
+- **Quick Actions** - One-click digest generation
+
+### News Lounge
+- **Digest Library** - Browse all generated content with audio indicators
+- **Audio Playback** - Professional player with progress controls
+- **Reading Modes** - Normal and full-screen comfortable reading
+- **Sources Display** - Complete article transparency with links
+
+### Settings
+- **Provider Testing** - Live LLM and database connection validation
+- **Rate Limiting** - Configure intelligent API management
+- **Model Configuration** - Visual model selection and testing
+- **Database Management** - Reset, cleanup, and nuclear options
+
+### Feed Management
+- **Reliability Testing** - Test individual feeds before adding
+- **Real-time Validation** - Instant feedback on feed health
+- **Curated Sources** - Pre-tested reliable RSS feeds included
+- **Error Handling** - Clear feedback on failed or blocked sources
+
+### History & Analytics
+- **Processing Statistics** - Detailed success/failure breakdowns
+- **Content Archive** - Generated broadcast history with search
+- **Audio Library** - Play past digests with full controls
+- **Performance Tracking** - Monitor system efficiency over time
+
+## 🔧 Configuration
+
+### Environment Variables (.env)
+```env
+# LLM Provider Selection
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=your_api_key_here
+
+# Rate Limiting & Processing
+MAX_ARTICLES_PER_FEED=10
+SUMMARY_MODEL_CONFIG=gemini_flash
+BROADCAST_MODEL_CONFIG=gemini_flash
+
+# Database & Web
+DATABASE_ENABLED=true
+WEB_HOST=127.0.0.1
+WEB_PORT=5000
+
+# Text-to-Speech
+TTS_VOICE=en-US-GuyNeural
+```
+
+### Intelligent Rate Limiting
+The system automatically manages API rate limits:
+```
+🔄 Gemini rate limit counter reset
+🐌 Approaching rate limit. Waiting 32s to avoid 429 errors...
+✅ Request successful (8/10 this minute)
+```
+
+### Model Configurations (settings/llm_settings/ai_models.yml)
+```yaml
+gemini_flash:
+  api_endpoint: "https://generativelanguage.googleapis.com/v1beta/openai/"
+  model: "gemini-1.5-flash"
+  temperature: 0.7
+  max_tokens: 4096
+
+default_model:
+  api_endpoint: "http://localhost:11434"
+  model: "mistral:latest"
+  temperature: 0.7
+  max_tokens: 4096
+```
+
+### Curated RSS Feeds (feeds.yaml)
 ```yaml
 feeds:
-  - https://rss.nytimes.com/services/xml/rss/nyt/World.xml
-  - https://feeds.bbci.co.uk/news/rss.xml
+  - "http://feeds.bbci.co.uk/news/world/rss.xml"        # BBC World
+  - "https://www.theguardian.com/world/rss"             # Guardian
+  - "https://feeds.npr.org/1001/rss.xml"                # NPR News
+  - "https://techcrunch.com/feed/"                      # TechCrunch
+  - "http://feeds.arstechnica.com/arstechnica/index"    # Ars Technica
+  - "https://www.wired.com/feed/rss"                    # Wired
+  - "http://feeds.marketwatch.com/marketwatch/topstories" # MarketWatch
+  - "https://feeds.feedburner.com/venturebeat/SZYF"     # VentureBeat
 ```
 
----
+## 🛠️ Command Line Usage
 
-## 🚀 Running the Script
+For advanced users, command-line tools remain available:
 
 ```bash
-python news_digest.py
+# Generate digest with enhanced processing
+python news_digest_enhanced.py
+
+# Test all connections and configurations
+python news_cli.py test-all
+
+# View detailed analytics and statistics
+python news_cli.py analytics
+
+# Database management and cleanup
+python news_cli.py cleanup --days 30
 ```
 
-The script will:
-- Fetch one article per feed
-- Summarize each
-- Generate a full news digest
-- Save the digest as `digest_YYYY-MM-DD_HH-MM-SS.md`
-- Save an audio file as `digest_YYYY-MM-DD_HH-MM-SS.mp3`
+## 📁 Enhanced Project Structure
+
+```
+News02/
+├── 🌐 Professional Web Interface
+│   ├── web_app.py              # Enhanced Flask application
+│   ├── run_web.py              # Web launcher
+│   ├── templates/              # Professional HTML templates
+│   │   ├── lounge.html         # News consumption interface
+│   │   ├── dashboard.html      # Real-time monitoring
+│   │   └── settings.html       # Configuration management
+│   └── static/                 # Modern CSS, JS, images
+├── 🤖 Enhanced Core System
+│   ├── news_digest_enhanced.py # Professional broadcast generation
+│   ├── llm_client.py          # Multi-provider with rate limiting
+│   ├── config_manager.py       # Advanced configuration handling
+│   └── database.py            # Enhanced SQLite integration
+├── ⚙️ Smart Configuration
+│   ├── .env                   # Environment variables
+│   ├── feeds.yaml             # Curated reliable RSS feeds
+│   └── settings/              # Model configurations
+└── 🛠️ Professional Tools
+    ├── auto_setup.py          # Intelligent setup script
+    ├── quick_setup.bat/.sh    # Platform launchers
+    └── news_cli.py            # Enhanced command-line utilities
+```
+
+## 📚 Documentation
+
+- **[📖 Setup Guide](README_SETUP.md)** - Detailed installation instructions
+- **[🌐 Web Interface](README_WEB.md)** - Web dashboard documentation  
+- **[🔧 Enhanced Features](README_ENHANCED.md)** - Advanced configuration
+- **[⚡ Architecture](flow.md)** - Technical implementation details
+
+## 🎯 Professional Workflow
+
+1. **Setup** - Run quick setup script for automatic configuration
+2. **Configure** - Set LLM provider with live connection testing
+3. **Manage Feeds** - Add reliable RSS feeds with validation
+4. **Generate** - Click "Generate Digest" and monitor real-time progress
+5. **Experience** - Professional lounge with audio playback and source tracking
+6. **Manage** - Database tools for maintenance and optimization
+
+## 💡 Professional Use Cases
+
+- **Daily News Briefing** - Comprehensive customized news summaries
+- **Research Monitoring** - Track industry developments with source links
+- **Content Creation** - Source material with proper attribution
+- **Accessibility** - Professional audio news for all users
+- **Corporate Intelligence** - Monitor multiple sources efficiently
+- **Educational Content** - Teaching material with source transparency
+
+## 🔍 System Requirements
+
+### Minimum
+- **Python 3.8+** with pip
+- **2GB RAM** for basic operation
+- **Internet connection** for RSS feeds and LLM APIs
+- **Modern web browser** for dashboard interface
+
+### Recommended
+- **Python 3.10+** for optimal performance
+- **4GB+ RAM** for faster processing
+- **SSD storage** for database performance
+- **Chrome/Firefox** for best web experience
+
+### Optional Enhancements
+- **Ollama** for local LLM inference
+- **CUDA/ROCm** for GPU acceleration
+- **Google Gemini API** for cloud processing
+
+## 🚦 Rate Limiting & Performance
+
+### Intelligent API Management
+- **Automatic rate detection** and prevention
+- **Smart delays** to avoid 429 errors
+- **Free tier optimization** for Google Gemini
+- **Progress monitoring** with detailed statistics
+
+### Processing Statistics
+```
+🔍 ARTICLE PROCESSING SUMMARY:
+   📥 Total articles found: 32
+   ✅ Successfully processed: 28
+   ❌ Failed/skipped: 4
+   📊 Success rate: 87.5%
+```
+
+## 🆘 Support
+
+### Quick Help
+1. **Setup Issues**: Check [`README_SETUP.md`](README_SETUP.md)
+2. **Web Interface**: See [`README_WEB.md`](README_WEB.md)
+3. **Configuration**: Review [`.env`](.env) and [`settings/`](settings/)
+4. **Testing**: Run `python news_cli.py test-all`
+
+### Common Issues
+- **Port conflicts**: Change `WEB_PORT` in `.env`
+- **Import errors**: Ensure virtual environment is activated
+- **LLM failures**: Test connections in Settings tab
+- **Feed errors**: Validate URLs in Feeds tab
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+## 🙏 Acknowledgments
+
+- **Ollama** - Local LLM inference platform
+- **OpenAI** - API standards and models
+- **Google** - Gemini AI integration
+- **Microsoft** - Edge TTS service
+- **Bootstrap** - Web interface framework
 
 ---
 
-## 🗣️ Voice Options
-
-You can change the voice used for TTS by editing the `TTS_VOICE` variable. Supported voices include:
-- `en-US-GuyNeural` (default, male)
-- `en-US-JennyNeural` (female)
-- `en-GB-RyanNeural` (UK male)
-- `en-IN-PrabhatNeural` (Indian English male)
-
-See [Edge TTS Voice List](https://docs.microsoft.com/en-us/azure/cognitive-services/speech-service/language-support) for more.
-
----
-
-## 🧠 Customization Tips
-
-- Adjust `max_articles` in `fetch_articles()` to increase the number of articles per feed
-- Modify the `summarize_with_ollama()` and `generate_broadcast()` prompts for a different tone or depth
-- Swap `SUMMARY_MODEL` or `BROADCAST_MODEL` to use other Ollama-supported models like `llama3`, `gemma`, etc.
-
----
-
-## 📁 Output
-
-- Markdown news summary file
-- Matching MP3 file with TTS narration
-
-Files are saved in the same directory by default. You can change `output_dir` in `save_digest()`.
-
----
-
-## 🔒 License
-
-MIT License
+**🚀 Ready to get started?** Run the setup script and have your AI news digest system running in minutes!

@@ -1,0 +1,34 @@
+# Reliable RSS Feeds for News02
+# These feeds have been tested and work consistently
+
+feeds:
+  # International News (Reliable sources)
+  - "http://feeds.bbci.co.uk/news/world/rss.xml"  # BBC World News
+  - "https://www.theguardian.com/international/rss"  # Guardian International
+  - "https://feeds.npr.org/1001/rss.xml"  # NPR News
+  
+  # Technology News (Working feeds)
+  - "https://techcrunch.com/feed/"  # TechCrunch
+  - "https://feeds.arstechnica.com/arstechnica/index"  # Ars Technica
+  - "https://www.wired.com/feed/rss"  # Wired Magazine
+  
+  # Business & Finance (Accessible feeds)
+  - "https://feeds.marketwatch.com/marketwatch/topstories/"  # MarketWatch
+  - "https://feeds.fortune.com/fortune/headlines/"  # Fortune Headlines
+  
+  # Science & Technology
+  - "https://feeds.feedburner.com/venturebeat/SZYF"  # VentureBeat
+  - "https://feeds.feedburner.com/TheHackerNews"  # Security News
+
+# Problematic feeds to avoid (from your current config):
+# - "https://feeds.reuters.com/reuters/worldNews"  # DNS issues
+# - "https://rss.cnn.com/rss/edition.rss"  # SSL errors  
+# - "https://feeds.feedburner.com/oreilly/radar"  # Malformed XML
+# - "https://feeds.finance.yahoo.com/rss/2.0/headline"  # Parse errors
+# - "https://feeds.bloomberg.com/markets/news.rss"  # 403 Forbidden errors
+
+# Additional reliable feeds you can uncomment:
+# - "https://feeds.feedburner.com/ign/all"  # IGN All
+# - "https://feeds.pcworld.com/pcworld/latestnews"  # PC World
+# - "https://feeds.mashable.com/Mashable"  # Mashable
+# - "https://feeds.engadget.com/weblogsinc/engadget"  # Engadget
