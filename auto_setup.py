@@ -53,7 +53,7 @@ def print_step(step_num, total_steps, description):
 
 def check_python_version():
     """Check if Python version is compatible"""
-    print_step(1, 8, "Checking Python version")
+    print_step(1, 9, "Checking Python version")
     
     version = sys.version_info
     if version.major < 3 or (version.major == 3 and version.minor < 8):
@@ -65,7 +65,7 @@ def check_python_version():
 
 def create_virtual_environment():
     """Create virtual environment"""
-    print_step(2, 8, "Creating virtual environment")
+    print_step(2, 9, "Creating virtual environment")
     
     venv_path = Path("venv")
     
@@ -104,7 +104,7 @@ def get_venv_pip():
 
 def upgrade_pip():
     """Upgrade pip in virtual environment"""
-    print_step(3, 8, "Upgrading pip")
+    print_step(3, 9, "Upgrading pip")
     
     pip_path = get_venv_pip()
     python_path = get_venv_python()
@@ -121,7 +121,7 @@ def upgrade_pip():
 
 def install_dependencies():
     """Install project dependencies"""
-    print_step(4, 8, "Installing dependencies")
+    print_step(4, 9, "Installing dependencies")
     
     python_path = get_venv_python()
     
@@ -200,7 +200,7 @@ def install_dependencies():
 
 def create_directories():
     """Create necessary directories"""
-    print_step(5, 8, "Creating directories")
+    print_step(5, 9, "Creating directories")
     
     directories = ["logs", "output", "settings/llm_settings"]
     
@@ -213,7 +213,7 @@ def create_directories():
 
 def setup_configuration():
     """Setup configuration files"""
-    print_step(6, 8, "Setting up configuration")
+    print_step(7, 9, "Setting up configuration")
     
     config_files = {
         ".env": "Environment variables",
@@ -238,9 +238,52 @@ def setup_configuration():
     
     return True
 
+def clone_feed_discovery_repo():
+    """Clone the awesome-rss-feeds repository for feed discovery"""
+    print_step(6, 9, "Setting up feed discovery database")
+    
+    repo_url = "https://github.com/plenaryapp/awesome-rss-feeds.git"
+    repo_dir = Path("awesome-rss-feeds")
+    
+    if repo_dir.exists():
+        print_info("Feed discovery database already exists")
+        
+        # Check if it's a git repository and try to update
+        if (repo_dir / ".git").exists():
+            try:
+                print_info("Updating feed database...")
+                subprocess.run(["git", "pull"], cwd=repo_dir, check=True, capture_output=True)
+                print_success("Feed database updated successfully")
+            except subprocess.CalledProcessError:
+                print_warning("Failed to update feed database, using existing version")
+        
+        print_success(f"Feed discovery available with 300+ RSS feeds")
+        return True
+    
+    # Check if git is available
+    try:
+        subprocess.run(["git", "--version"], check=True, capture_output=True)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print_warning("Git not found - feed discovery database will not be available")
+        print_info("You can still use News02 with manual RSS feed management")
+        return True  # Not a failure, just a missing feature
+    
+    try:
+        print_info("Cloning feed discovery database (awesome-rss-feeds)...")
+        subprocess.run([
+            "git", "clone", repo_url, str(repo_dir)
+        ], check=True, capture_output=True)
+        print_success("Feed discovery database cloned successfully")
+        print_success("📊 Access to 300+ curated RSS feeds enabled")
+        return True
+    except subprocess.CalledProcessError as e:
+        print_warning("Failed to clone feed discovery database")
+        print_info("You can still use News02 with manual RSS feed management")
+        return True  # Not a failure, just a missing feature
+
 def test_installation():
     """Test the installation"""
-    print_step(7, 8, "Testing installation")
+    print_step(8, 9, "Testing installation")
     
     python_path = get_venv_python()
     
@@ -301,7 +344,7 @@ def test_installation():
 
 def show_completion_instructions():
     """Show completion instructions"""
-    print_step(8, 8, "Setup complete!")
+    print_step(9, 9, "Setup complete!")
     
     # Determine activation command based on OS
     if platform.system() == "Windows":
@@ -330,8 +373,14 @@ def show_completion_instructions():
     
     print(f"\n{Colors.BOLD}{Colors.WARNING}📝 Next steps:{Colors.ENDC}")
     print(f"{Colors.WARNING}1. Configure your LLM provider in the web interface Settings tab{Colors.ENDC}")
-    print(f"{Colors.WARNING}2. Add your RSS feeds in the Feeds tab{Colors.ENDC}")
+    print(f"{Colors.WARNING}2. Add your RSS feeds in the Feeds tab (or discover 300+ feeds!){Colors.ENDC}")
     print(f"{Colors.WARNING}3. Generate your first news digest!{Colors.ENDC}")
+    
+    print(f"\n{Colors.BOLD}{Colors.OKGREEN}🆕 Feed Discovery Features:{Colors.ENDC}")
+    print(f"{Colors.OKGREEN}• Browse 300+ curated RSS feeds by category{Colors.ENDC}")
+    print(f"{Colors.OKGREEN}• Search feeds by topic or keyword{Colors.ENDC}")
+    print(f"{Colors.OKGREEN}• Filter to English-only sources{Colors.ENDC}")
+    print(f"{Colors.OKGREEN}• One-click add to your feed list{Colors.ENDC}")
     
     print(f"\n{Colors.BOLD}{Colors.OKBLUE}🔧 If you have issues:{Colors.ENDC}")
     print(f"{Colors.OKBLUE}• Install missing packages: {python_cmd} -m pip install package-name{Colors.ENDC}")
@@ -394,6 +443,7 @@ def main():
         upgrade_pip,
         install_dependencies,
         create_directories,
+        clone_feed_discovery_repo,
         setup_configuration,
         test_installation,
     ]
