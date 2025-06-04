@@ -59,66 +59,85 @@
             </div>
         </div>
 
-        <!-- Popular Feeds Template -->
+        <!-- Feed Discovery Interface -->
         <div class="card mt-4">
             <div class="card-header">
                 <h5 class="card-title mb-0">
-                    <i class="bi bi-star"></i> Popular News Feeds
+                    <i class="bi bi-search"></i> Discover RSS Feeds
                 </h5>
+                <small class="text-muted">Explore curated feeds from awesome-rss-feeds collection</small>
             </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6>International News</h6>
-                        <div class="list-group list-group-flush">
-                            <div class="list-group-item d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>BBC World News</strong>
-                                    <br><small class="text-muted">http://feeds.bbci.co.uk/news/world/rss.xml</small>
-                                </div>
-                                <button class="btn btn-sm btn-outline-primary" onclick="addPopularFeed('http://feeds.bbci.co.uk/news/world/rss.xml')">Add</button>
-                            </div>
-                            <div class="list-group-item d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>Reuters World</strong>
-                                    <br><small class="text-muted">https://feeds.reuters.com/reuters/worldNews</small>
-                                </div>
-                                <button class="btn btn-sm btn-outline-primary" onclick="addPopularFeed('https://feeds.reuters.com/reuters/worldNews')">Add</button>
-                            </div>
-                            <div class="list-group-item d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>Guardian International</strong>
-                                    <br><small class="text-muted">https://www.theguardian.com/international/rss</small>
-                                </div>
-                                <button class="btn btn-sm btn-outline-primary" onclick="addPopularFeed('https://www.theguardian.com/international/rss')">Add</button>
-                            </div>
+                <!-- Search Interface -->
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="text" class="form-control" id="feedSearchInput"
+                                   placeholder="Search feeds by name, topic, or description...">
+                            <button class="btn btn-outline-primary" onclick="searchFeeds()">Search</button>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <h6>Technology News</h6>
-                        <div class="list-group list-group-flush">
-                            <div class="list-group-item d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>TechCrunch</strong>
-                                    <br><small class="text-muted">https://techcrunch.com/feed/</small>
-                                </div>
-                                <button class="btn btn-sm btn-outline-primary" onclick="addPopularFeed('https://techcrunch.com/feed/')">Add</button>
-                            </div>
-                            <div class="list-group-item d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>Ars Technica</strong>
-                                    <br><small class="text-muted">https://feeds.arstechnica.com/arstechnica/index</small>
-                                </div>
-                                <button class="btn btn-sm btn-outline-primary" onclick="addPopularFeed('https://feeds.arstechnica.com/arstechnica/index')">Add</button>
-                            </div>
-                            <div class="list-group-item d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>Hacker News</strong>
-                                    <br><small class="text-muted">https://feeds.feedburner.com/oreilly/radar</small>
-                                </div>
-                                <button class="btn btn-sm btn-outline-primary" onclick="addPopularFeed('https://feeds.feedburner.com/oreilly/radar')">Add</button>
-                            </div>
+                    <div class="col-md-4">
+                        <select class="form-select" id="categoryFilter" onchange="loadFeedsByCategory()">
+                            <option value="">All Categories</option>
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Quick Category Buttons -->
+                <div class="mb-3">
+                    <button class="btn btn-outline-secondary btn-sm me-2 mb-1" onclick="loadPopularFeeds()">
+                        <i class="bi bi-star"></i> Popular
+                    </button>
+                    <button class="btn btn-primary btn-sm me-2 mb-1" onclick="loadEnglishFeeds()">
+                        <i class="bi bi-translate"></i> English Only
+                    </button>
+                    <button class="btn btn-outline-info btn-sm me-2 mb-1" onclick="loadRecommendedCategory('News')">
+                        <i class="bi bi-newspaper"></i> News
+                    </button>
+                    <button class="btn btn-outline-success btn-sm me-2 mb-1" onclick="loadRecommendedCategory('Tech')">
+                        <i class="bi bi-cpu"></i> Technology
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm me-2 mb-1" onclick="loadRecommendedCategory('Programming')">
+                        <i class="bi bi-code"></i> Programming
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm me-2 mb-1" onclick="loadCountryCategory('Canada')">
+                        <i class="bi bi-flag"></i> Canada
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm me-2 mb-1" onclick="loadCountryCategory('United Kingdom')">
+                        <i class="bi bi-flag"></i> UK
+                    </button>
+                </div>
+
+                <!-- Feed Discovery Stats -->
+                <div class="row mb-3" id="discoveryStats" style="display: none;">
+                    <div class="col-12">
+                        <div class="alert alert-info py-2">
+                            <small>
+                                <i class="bi bi-info-circle"></i>
+                                <span id="statsText">Loading feed database...</span>
+                            </small>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Search Results -->
+                <div id="feedDiscoveryResults">
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-search fs-1"></i>
+                        <p class="mt-2">Search for feeds or browse categories above</p>
+                    </div>
+                </div>
+
+                <!-- Loading Indicator -->
+                <div id="feedDiscoveryLoading" style="display: none;">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Loading feeds...</p>
                     </div>
                 </div>
             </div>
@@ -221,7 +240,322 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('feedsForm').addEventListener('submit', saveFeeds);
+    initializeFeedDiscovery();
+    
+    // Add enter key support for search
+    document.getElementById('feedSearchInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            searchFeeds();
+        }
+    });
 });
+
+// Feed Discovery Functions
+function initializeFeedDiscovery() {
+    loadCategories();
+    loadDiscoveryStats();
+}
+
+function loadCategories() {
+    fetch('/api/feed_discovery/categories')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const select = document.getElementById('categoryFilter');
+                select.innerHTML = '<option value="">All Categories</option>';
+                
+                data.categories.forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat.key;
+                    option.textContent = `${cat.display_name} (${cat.feed_count})`;
+                    select.appendChild(option);
+                });
+            }
+        })
+        .catch(error => console.error('Error loading categories:', error));
+}
+
+function loadDiscoveryStats() {
+    fetch('/api/feed_discovery/categories')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.stats) {
+                const statsDiv = document.getElementById('discoveryStats');
+                const statsText = document.getElementById('statsText');
+                
+                statsText.textContent = `${data.stats.total_feeds} feeds available across ${data.stats.total_categories} categories`;
+                statsDiv.style.display = 'block';
+            }
+        })
+        .catch(error => console.error('Error loading stats:', error));
+}
+
+function searchFeeds() {
+    const query = document.getElementById('feedSearchInput').value.trim();
+    const category = document.getElementById('categoryFilter').value;
+    
+    if (!query && !category) {
+        showFeedDiscoveryMessage('Please enter a search term or select a category', 'warning');
+        return;
+    }
+    
+    showLoading(true);
+    
+    const params = new URLSearchParams();
+    if (query) params.append('q', query);
+    if (category) params.append('category', category);
+    
+    fetch(`/api/feed_discovery/search?${params}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayFeedResults(data.feeds, `Found ${data.count} feeds`);
+            } else {
+                showFeedDiscoveryMessage('Error searching feeds: ' + data.error, 'danger');
+            }
+        })
+        .catch(error => {
+            showFeedDiscoveryMessage('Error searching feeds: ' + error.message, 'danger');
+        })
+        .finally(() => showLoading(false));
+}
+
+function loadFeedsByCategory() {
+    const category = document.getElementById('categoryFilter').value;
+    if (!category) {
+        clearFeedResults();
+        return;
+    }
+    
+    loadCategoryFeeds(category);
+}
+
+function loadCategoryFeeds(categoryKey) {
+    showLoading(true);
+    
+    fetch(`/api/feed_discovery/feeds/${categoryKey}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayFeedResults(data.feeds, `${data.count} feeds in this category`);
+                
+                // Update the category filter to match
+                const select = document.getElementById('categoryFilter');
+                select.value = categoryKey;
+            } else {
+                showFeedDiscoveryMessage('Error loading category feeds: ' + data.error, 'danger');
+            }
+        })
+        .catch(error => {
+            showFeedDiscoveryMessage('Error loading category feeds: ' + error.message, 'danger');
+        })
+        .finally(() => showLoading(false));
+}
+
+function loadPopularFeeds() {
+    showLoading(true);
+    
+    fetch('/api/feed_discovery/popular?limit=20')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayFeedResults(data.feeds, `${data.count} popular feeds`);
+            } else {
+                showFeedDiscoveryMessage('Error loading popular feeds: ' + data.error, 'danger');
+            }
+        })
+        .catch(error => {
+            showFeedDiscoveryMessage('Error loading popular feeds: ' + error.message, 'danger');
+        })
+        .finally(() => showLoading(false));
+}
+
+function loadEnglishFeeds() {
+    showLoading(true);
+    
+    fetch('/api/feed_discovery/english?limit=30')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayFeedResults(data.feeds, `${data.count} English-language feeds`);
+                
+                // Update category filter with English-only options
+                updateCategoryFilterForEnglish(data.categories);
+            } else {
+                showFeedDiscoveryMessage('Error loading English feeds: ' + data.error, 'danger');
+            }
+        })
+        .catch(error => {
+            showFeedDiscoveryMessage('Error loading English feeds: ' + error.message, 'danger');
+        })
+        .finally(() => showLoading(false));
+}
+
+function loadRecommendedCategory(categoryName) {
+    // Find the recommended category that matches
+    const categoryKey = `recommended_${categoryName}`;
+    loadCategoryFeeds(categoryKey);
+}
+
+function loadCountryCategory(countryName) {
+    // Find the country category that matches
+    const categoryKey = `country_${countryName}`;
+    loadCategoryFeeds(categoryKey);
+}
+
+function updateCategoryFilterForEnglish(englishCategories) {
+    const select = document.getElementById('categoryFilter');
+    select.innerHTML = '<option value="">All English Categories</option>';
+    
+    englishCategories.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat.key;
+        option.textContent = `${cat.display_name} (${cat.feed_count})`;
+        select.appendChild(option);
+    });
+}
+
+function displayFeedResults(feeds, headerText) {
+    const resultsDiv = document.getElementById('feedDiscoveryResults');
+    
+    if (feeds.length === 0) {
+        resultsDiv.innerHTML = `
+            <div class="text-center text-muted py-4">
+                <i class="bi bi-exclamation-circle fs-1"></i>
+                <p class="mt-2">No feeds found matching your criteria</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = `<div class="mb-2"><small class="text-muted">${headerText}</small></div>`;
+    
+    feeds.forEach(feed => {
+        const description = feed.description ? `<br><small class="text-muted">${feed.description}</small>` : '';
+        const category = feed.category_display ? `<span class="badge bg-secondary me-2">${feed.category_display}</span>` : '';
+        
+        html += `
+            <div class="list-group-item d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <div class="d-flex align-items-center mb-1">
+                        ${category}
+                        <strong>${feed.title || feed.text}</strong>
+                    </div>
+                    <div class="feed-url">
+                        <small class="text-muted font-monospace">${feed.url}</small>
+                    </div>
+                    ${description}
+                </div>
+                <div class="d-flex gap-1">
+                    <button class="btn btn-sm btn-outline-info" onclick="testDiscoveredFeed('${feed.url}', this)">
+                        <i class="bi bi-check-circle"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="addDiscoveredFeed('${feed.url}')">
+                        <i class="bi bi-plus-circle"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    
+    resultsDiv.innerHTML = `<div class="list-group">${html}</div>`;
+}
+
+function addDiscoveredFeed(feedUrl) {
+    // Check if feed already exists
+    const existingInputs = document.querySelectorAll('input[name="feeds[]"]');
+    for (let input of existingInputs) {
+        if (input.value === feedUrl) {
+            showAlert('Feed already exists in the list', 'warning');
+            return;
+        }
+    }
+    
+    addFeed();
+    const inputs = document.querySelectorAll('input[name="feeds[]"]');
+    inputs[inputs.length - 1].value = feedUrl;
+    
+    showAlert('Feed added to your list', 'success');
+    
+    // Scroll to the feeds section
+    document.getElementById('feedsList').scrollIntoView({ behavior: 'smooth' });
+}
+
+function testDiscoveredFeed(feedUrl, button) {
+    const originalIcon = button.innerHTML;
+    button.innerHTML = '<i class="bi bi-arrow-repeat spinning"></i>';
+    button.disabled = true;
+    
+    fetch('/api/test_feed', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({url: feedUrl})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            button.innerHTML = '<i class="bi bi-check-circle text-success"></i>';
+            showAlert(`Feed is valid! Found ${data.articles || 0} articles.`, 'success');
+        } else {
+            button.innerHTML = '<i class="bi bi-exclamation-circle text-danger"></i>';
+            showAlert('Feed validation failed: ' + (data.error || 'Unknown error'), 'danger');
+        }
+        
+        setTimeout(() => {
+            button.innerHTML = originalIcon;
+            button.disabled = false;
+        }, 3000);
+    })
+    .catch(error => {
+        button.innerHTML = '<i class="bi bi-exclamation-circle text-danger"></i>';
+        showAlert('Error testing feed: ' + error.message, 'danger');
+        
+        setTimeout(() => {
+            button.innerHTML = originalIcon;
+            button.disabled = false;
+        }, 3000);
+    });
+}
+
+function clearFeedResults() {
+    const resultsDiv = document.getElementById('feedDiscoveryResults');
+    resultsDiv.innerHTML = `
+        <div class="text-center text-muted py-4">
+            <i class="bi bi-search fs-1"></i>
+            <p class="mt-2">Search for feeds or browse categories above</p>
+        </div>
+    `;
+}
+
+function showLoading(show) {
+    const loadingDiv = document.getElementById('feedDiscoveryLoading');
+    const resultsDiv = document.getElementById('feedDiscoveryResults');
+    
+    if (show) {
+        loadingDiv.style.display = 'block';
+        resultsDiv.style.display = 'none';
+    } else {
+        loadingDiv.style.display = 'none';
+        resultsDiv.style.display = 'block';
+    }
+}
+
+function showFeedDiscoveryMessage(message, type) {
+    const resultsDiv = document.getElementById('feedDiscoveryResults');
+    const iconMap = {
+        'success': 'check-circle',
+        'warning': 'exclamation-triangle',
+        'danger': 'exclamation-circle',
+        'info': 'info-circle'
+    };
+    
+    resultsDiv.innerHTML = `
+        <div class="alert alert-${type} text-center">
+            <i class="bi bi-${iconMap[type] || 'info-circle'} fs-3"></i>
+            <p class="mt-2 mb-0">${message}</p>
+        </div>
+    `;
+}
 
 function addFeed() {
     const feedsList = document.getElementById('feedsList');
