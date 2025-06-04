@@ -44,7 +44,13 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'settings' %}active{% endif %}" 
+                        <a class="nav-link {% if request.endpoint == 'jobs' %}active{% endif %}"
+                           href="{{ url_for('jobs') }}">
+                            <i class="bi bi-calendar-check"></i> Jobs
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'settings' %}active{% endif %}"
                            href="{{ url_for('settings') }}">
                             <i class="bi bi-gear"></i> Settings
                         </a>
