@@ -1,0 +1,9 @@
+feedparser
+newspaper3k
+transformers
+torch
+pyyaml
+edge-tts
+lxml[html_clean]
+ollama
+tqdm
