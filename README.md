@@ -22,7 +22,7 @@ SUMMARY_MODEL = 'mistral:latest'            # For summarizing articles
 BROADCAST_MODEL = 'mistral-small:24b-instruct-2501-q8_0'  # For combining summaries into a narrative
 TTS_VOICE = "en-US-GuyNeural"               # Microsoft Edge TTS voice
 # ===========================
-
+```
 
 ⸻
 
