@@ -2,6 +2,8 @@
 
 ![Screenshot_20250604_154206](https://github.com/user-attachments/assets/5b824481-329d-40fa-815b-ee3855994a4b)
 
+![image](https://github.com/user-attachments/assets/c6112b34-8603-4f5f-8d9a-d5bd42cb2f1f)
+
 
 # 📰 News02 - Professional AI News Digest System
 
