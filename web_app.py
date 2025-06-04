@@ -23,6 +23,7 @@ from functions.news_digest_enhanced import (
     generate_broadcast_with_llm, save_digest, text_to_speech
 )
 from functions.news_cli import test_llm_connection, test_database
+from functions.feed_discovery import feed_discovery
 
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'news02-secret-key-change-me')
@@ -1008,6 +1009,154 @@ def api_wipe_database():
             'message': f'🔥 NUCLEAR OPTION COMPLETE! Database completely wiped clean. Removed {article_count} articles, {summary_count} summaries, and {broadcast_count} broadcasts. Fresh start achieved.'
         })
         
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/feed_discovery/categories')
+def api_feed_discovery_categories():
+    """Get all available feed categories"""
+    try:
+        categories = feed_discovery.get_all_categories()
+        stats = feed_discovery.get_feed_stats()
+        return jsonify({
+            'success': True,
+            'categories': categories,
+            'stats': stats
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/feed_discovery/feeds/<category_key>')
+def api_feed_discovery_feeds(category_key):
+    """Get feeds for a specific category"""
+    try:
+        feeds = feed_discovery.get_feeds_by_category(category_key)
+        return jsonify({
+            'success': True,
+            'feeds': feeds,
+            'count': len(feeds)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/feed_discovery/search')
+def api_feed_discovery_search():
+    """Search feeds with pagination"""
+    try:
+        query = request.args.get('q', '').strip()
+        category_filter = request.args.get('category', None)
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 30))
+        
+        if not query:
+            # Return popular feeds if no query
+            all_feeds = feed_discovery.get_popular_feeds(999)
+        else:
+            all_feeds = feed_discovery.search_feeds(query, category_filter)
+        
+        total_feeds = len(all_feeds)
+        
+        # Calculate pagination
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        feeds = all_feeds[start_idx:end_idx]
+        
+        total_pages = (total_feeds + per_page - 1) // per_page
+        
+        return jsonify({
+            'success': True,
+            'feeds': feeds,
+            'query': query,
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total_feeds': total_feeds,
+                'total_pages': total_pages,
+                'has_next': page < total_pages,
+                'has_prev': page > 1
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/feed_discovery/popular')
+def api_feed_discovery_popular():
+    """Get popular/recommended feeds with pagination"""
+    try:
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 30))
+        
+        # Get all popular feeds first
+        all_feeds = feed_discovery.get_popular_feeds(999)
+        total_feeds = len(all_feeds)
+        
+        # Calculate pagination
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        feeds = all_feeds[start_idx:end_idx]
+        
+        total_pages = (total_feeds + per_page - 1) // per_page
+        
+        return jsonify({
+            'success': True,
+            'feeds': feeds,
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total_feeds': total_feeds,
+                'total_pages': total_pages,
+                'has_next': page < total_pages,
+                'has_prev': page > 1
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/feed_discovery/english')
+def api_feed_discovery_english():
+    """Get English-language feeds with pagination"""
+    try:
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 30))
+        
+        # Get all English feeds first
+        all_feeds = feed_discovery.get_english_feeds(999)  # Get all
+        total_feeds = len(all_feeds)
+        
+        # Calculate pagination
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        feeds = all_feeds[start_idx:end_idx]
+        
+        total_pages = (total_feeds + per_page - 1) // per_page
+        
+        categories = feed_discovery.get_english_categories()
+        return jsonify({
+            'success': True,
+            'feeds': feeds,
+            'categories': categories,
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total_feeds': total_feeds,
+                'total_pages': total_pages,
+                'has_next': page < total_pages,
+                'has_prev': page > 1
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/feed_discovery/english_categories')
+def api_feed_discovery_english_categories():
+    """Get English-language categories only"""
+    try:
+        categories = feed_discovery.get_english_categories()
+        return jsonify({
+            'success': True,
+            'categories': categories,
+            'count': len(categories)
+        })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
