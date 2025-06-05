@@ -178,6 +178,84 @@
                 </form>
             </div>
         </div>
+
+        <!-- Remote Digest API Settings -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-cloud-upload"></i> Remote Digest API
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Remote Digest API</strong> allows external applications to access your generated digest files via secure API endpoints.
+                    Useful for integrating with other systems or sharing digests programmatically.
+                </div>
+
+                <form id="remoteApiForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="apiEnabled">
+                                <label class="form-check-label" for="apiEnabled">
+                                    <strong>Enable Remote Digest API</strong>
+                                </label>
+                            </div>
+
+                            <div class="mb-3" id="apiKeySection" style="display: none;">
+                                <label for="apiKey" class="form-label">API Key</label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="apiKey" readonly placeholder="API key will appear here after generation">
+                                    <button class="btn btn-outline-secondary" type="button" id="toggleApiKey">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn btn-warning" type="button" id="generateApiKey">
+                                        Generate New Key
+                                    </button>
+                                </div>
+                                <div class="form-text">
+                                    <i class="bi bi-exclamation-triangle text-warning"></i>
+                                    Store this key securely! It won't be shown again after generation.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="maxPerRequest" class="form-label">Max Digests Per Request</label>
+                                <input type="number" class="form-control" id="maxPerRequest" min="1" max="50" value="10">
+                                <div class="form-text">Maximum number of digests that can be requested in a single API call</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="rateLimit" class="form-label">Rate Limit (requests/hour)</label>
+                                <input type="number" class="form-control" id="rateLimit" min="10" max="1000" value="100">
+                                <div class="form-text">Maximum API requests per hour per IP address</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row" id="apiEndpoints" style="display: none;">
+                        <div class="col-12">
+                            <h6>API Endpoints</h6>
+                            <div class="bg-light p-3 rounded">
+                                <code class="d-block mb-2">GET /api/remote/stats</code>
+                                <code class="d-block mb-2">GET /api/remote/digests?limit=3&order=newest</code>
+                                <code class="d-block mb-2">GET /api/remote/digest/{id}/text</code>
+                                <code class="d-block">GET /api/remote/digest/{id}/audio</code>
+                            </div>
+                            <small class="text-muted">All endpoints require <code>X-API-Key</code> header</small>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Save API Settings</button>
+                    <button type="button" class="btn btn-outline-info ms-2" id="testApiConnection" style="display: none;">
+                        Test API Connection
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
 
     <!-- Model Configurations Preview -->
@@ -250,6 +328,18 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initial status check
     checkAllStatus();
+    
+    // Load Remote Digest API settings
+    loadRemoteApiSettings();
+    
+    // Remote API form submission
+    document.getElementById('remoteApiForm').addEventListener('submit', saveRemoteApiSettings);
+    
+    // Remote API event listeners
+    document.getElementById('apiEnabled').addEventListener('change', toggleApiSettings);
+    document.getElementById('generateApiKey').addEventListener('click', generateNewApiKey);
+    document.getElementById('toggleApiKey').addEventListener('click', toggleApiKeyVisibility);
+    document.getElementById('testApiConnection').addEventListener('click', testApiConnection);
 });
 
 function toggleProviderSettings() {
@@ -498,6 +588,159 @@ function executeNuclearWipe() {
     })
     .catch(error => {
         showAlert('❌ Nuclear wipe error: ' + error.message, 'danger');
+    });
+}
+
+// Remote Digest API Functions
+function loadRemoteApiSettings() {
+    fetch('/api/remote_digest_settings')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const settings = data.settings;
+                document.getElementById('apiEnabled').checked = settings.enabled;
+                document.getElementById('maxPerRequest').value = settings.max_per_request;
+                document.getElementById('rateLimit').value = settings.rate_limit;
+                
+                toggleApiSettings();
+                
+                if (settings.has_api_key) {
+                    document.getElementById('apiKey').placeholder = '••••••••••••••••••••••••••••••••';
+                }
+            }
+        })
+        .catch(error => console.error('Error loading API settings:', error));
+}
+
+function toggleApiSettings() {
+    const enabled = document.getElementById('apiEnabled').checked;
+    const apiKeySection = document.getElementById('apiKeySection');
+    const apiEndpoints = document.getElementById('apiEndpoints');
+    const testButton = document.getElementById('testApiConnection');
+    
+    apiKeySection.style.display = enabled ? 'block' : 'none';
+    apiEndpoints.style.display = enabled ? 'block' : 'none';
+    testButton.style.display = enabled ? 'inline-block' : 'none';
+}
+
+function saveRemoteApiSettings(event) {
+    event.preventDefault();
+    
+    const formData = {
+        enabled: document.getElementById('apiEnabled').checked,
+        max_per_request: parseInt(document.getElementById('maxPerRequest').value),
+        rate_limit: parseInt(document.getElementById('rateLimit').value)
+    };
+    
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="bi bi-arrow-repeat spinning"></i> Saving...';
+    submitBtn.disabled = true;
+    
+    fetch('/api/remote_digest_settings', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('Remote Digest API settings saved!', 'success');
+            if (data.new_api_key) {
+                document.getElementById('apiKey').value = data.new_api_key;
+                document.getElementById('apiKey').type = 'text';
+                showAlert('New API key generated! Copy it now - it won\'t be shown again.', 'warning');
+            }
+        } else {
+            showAlert('Error saving API settings: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        showAlert('Error saving API settings: ' + error.message, 'danger');
+    })
+    .finally(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+}
+
+function generateNewApiKey() {
+    if (confirm('Generate a new API key? This will invalidate the current key.')) {
+        const formData = {
+            enabled: document.getElementById('apiEnabled').checked,
+            generate_new_key: true,
+            max_per_request: parseInt(document.getElementById('maxPerRequest').value),
+            rate_limit: parseInt(document.getElementById('rateLimit').value)
+        };
+        
+        fetch('/api/remote_digest_settings', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.new_api_key) {
+                document.getElementById('apiKey').value = data.new_api_key;
+                document.getElementById('apiKey').type = 'text';
+                showAlert('New API key generated! Copy it now.', 'success');
+            } else {
+                showAlert('Error generating API key: ' + (data.error || 'Unknown error'), 'danger');
+            }
+        })
+        .catch(error => {
+            showAlert('Error generating API key: ' + error.message, 'danger');
+        });
+    }
+}
+
+function toggleApiKeyVisibility() {
+    const keyField = document.getElementById('apiKey');
+    const toggleBtn = document.getElementById('toggleApiKey');
+    const icon = toggleBtn.querySelector('i');
+    
+    if (keyField.type === 'password') {
+        keyField.type = 'text';
+        icon.className = 'bi bi-eye-slash';
+    } else {
+        keyField.type = 'password';
+        icon.className = 'bi bi-eye';
+    }
+}
+
+function testApiConnection() {
+    const apiKey = document.getElementById('apiKey').value;
+    if (!apiKey) {
+        showAlert('No API key available to test', 'warning');
+        return;
+    }
+    
+    const btn = document.getElementById('testApiConnection');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-arrow-repeat spinning"></i> Testing...';
+    btn.disabled = true;
+    
+    fetch('/api/remote/auth', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': apiKey
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.authenticated) {
+            showAlert('API connection test successful!', 'success');
+        } else {
+            showAlert('API connection test failed', 'danger');
+        }
+    })
+    .catch(error => {
+        showAlert('API connection test error: ' + error.message, 'danger');
+    })
+    .finally(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
     });
 }
 </script>

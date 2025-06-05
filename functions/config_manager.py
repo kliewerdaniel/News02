@@ -87,7 +87,7 @@ class ConfigManager:
         """Get database configuration"""
         return {
             'enabled': os.getenv('DATABASE_ENABLED', 'true').lower() == 'true',
-            'path': os.getenv('DATABASE_PATH', 'news.db')
+            'path': os.getenv('DATABASE_PATH', 'data/news.db')
         }
     
     def get_output_config(self) -> Dict[str, Any]:

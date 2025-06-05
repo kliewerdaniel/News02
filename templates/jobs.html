@@ -18,6 +18,18 @@
             </div>
         </div>
 
+        <!-- Job Execution Info -->
+        <div class="alert alert-info mb-3">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-info-circle me-2"></i>
+                <div>
+                    <strong>Automatic Job Execution:</strong> Jobs are checked and executed every 5 minutes automatically.
+                    If a job shows as "Overdue", it's waiting for the next 5-minute interval to run.
+                    Use the "Run Overdue Jobs Now" button for immediate execution.
+                </div>
+            </div>
+        </div>
+
         <!-- Create New Job -->
         <div class="card mb-4">
             <div class="card-header">
@@ -92,7 +104,53 @@
                     </div>
                     
                     <div class="row">
-                        <div class="col-md-12">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">TTS Voice</label>
+                                <select class="form-select" id="jobTtsVoice">
+                                    <option value="">Use Default Voice</option>
+                                    <optgroup label="US English">
+                                        <option value="en-US-AriaNeural">Aria (Female)</option>
+                                        <option value="en-US-AvaNeural">Ava (Female)</option>
+                                        <option value="en-US-AndrewNeural">Andrew (Male)</option>
+                                        <option value="en-US-BrianNeural">Brian (Male)</option>
+                                        <option value="en-US-ChristopherNeural">Christopher (Male)</option>
+                                        <option value="en-US-EmmaNeural">Emma (Female)</option>
+                                        <option value="en-US-EricNeural">Eric (Male)</option>
+                                        <option value="en-US-GuyNeural">Guy (Male)</option>
+                                        <option value="en-US-JennyNeural">Jenny (Female)</option>
+                                        <option value="en-US-MichelleNeural">Michelle (Female)</option>
+                                        <option value="en-US-RogerNeural">Roger (Male)</option>
+                                        <option value="en-US-SteffanNeural">Steffan (Male)</option>
+                                    </optgroup>
+                                    <optgroup label="UK English">
+                                        <option value="en-GB-LibbyNeural">Libby (Female)</option>
+                                        <option value="en-GB-MaisieNeural">Maisie (Female)</option>
+                                        <option value="en-GB-RyanNeural">Ryan (Male)</option>
+                                        <option value="en-GB-SoniaNeural">Sonia (Female)</option>
+                                        <option value="en-GB-ThomasNeural">Thomas (Male)</option>
+                                    </optgroup>
+                                    <optgroup label="Australian English">
+                                        <option value="en-AU-NatashaNeural">Natasha (Female)</option>
+                                        <option value="en-AU-WilliamNeural">William (Male)</option>
+                                    </optgroup>
+                                    <optgroup label="Canadian English">
+                                        <option value="en-CA-ClaraNeural">Clara (Female)</option>
+                                        <option value="en-CA-LiamNeural">Liam (Male)</option>
+                                    </optgroup>
+                                    <optgroup label="Other English Variants">
+                                        <option value="en-IE-ConnorNeural">Connor (Male, Irish)</option>
+                                        <option value="en-IE-EmilyNeural">Emily (Female, Irish)</option>
+                                        <option value="en-IN-NeerjaNeural">Neerja (Female, Indian)</option>
+                                        <option value="en-IN-PrabhatNeural">Prabhat (Male, Indian)</option>
+                                        <option value="en-ZA-LeahNeural">Leah (Female, South African)</option>
+                                        <option value="en-ZA-LukeNeural">Luke (Male, South African)</option>
+                                    </optgroup>
+                                </select>
+                                <div class="form-text">Choose a specific voice for this job, or leave blank to use the default voice from settings</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Recurrence</label>
                                 <select class="form-select" id="jobRecurrence">
@@ -163,6 +221,14 @@
                         <div class="progress-bar" role="progressbar"></div>
                     </div>
                     <small class="text-muted" id="executionDetails"></small>
+                </div>
+                <div class="mt-3">
+                    <button class="btn btn-warning btn-sm w-100" onclick="runOverdueJobsNow()">
+                        <i class="bi bi-lightning-charge"></i> Run Overdue Jobs Now
+                    </button>
+                    <div class="form-text text-center">
+                        Force execution of all overdue jobs using the simple job runner
+                    </div>
                 </div>
             </div>
         </div>
@@ -316,6 +382,7 @@ function createJob(event) {
         articles_per_feed: parseInt(document.getElementById('jobArticlesPerFeed').value),
         summary_model: document.getElementById('jobSummaryModel').value,
         broadcast_model: document.getElementById('jobBroadcastModel').value,
+        tts_voice: document.getElementById('jobTtsVoice').value,
         recurrence: document.getElementById('jobRecurrence').value,
         enabled: document.getElementById('jobEnabled').checked
     };
@@ -609,10 +676,11 @@ function displayJobDetails(job) {
         </div>
         <div class="row mt-3">
             <div class="col-12">
-                <h6>Models</h6>
+                <h6>Models & Voice</h6>
                 <table class="table table-sm">
                     <tr><td><strong>Summary Model:</strong></td><td>${job.summary_model}</td></tr>
                     <tr><td><strong>Broadcast Model:</strong></td><td>${job.broadcast_model}</td></tr>
+                    <tr><td><strong>TTS Voice:</strong></td><td>${job.tts_voice || 'Default voice'}</td></tr>
                 </table>
             </div>
         </div>
@@ -708,6 +776,29 @@ function updateJobQueue(queue) {
     });
     
     container.innerHTML = html;
+}
+
+function runOverdueJobsNow() {
+    if (!confirm('Run all overdue jobs now using the simple job runner?')) return;
+    
+    fetch('/api/run_jobs_now', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('Job runner started! Check console logs for progress.', 'success');
+            // Refresh jobs after a few seconds
+            setTimeout(() => {
+                loadJobs();
+            }, 3000);
+        } else {
+            showAlert('Error: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        showAlert('Error: ' + error.message, 'danger');
+    });
 }
 
 // Utility function to show alerts

@@ -100,16 +100,16 @@
                             {% endif %}
                             
                             <div class="btn-group w-100" role="group">
-                                <button class="btn btn-outline-primary" onclick="viewBroadcast({{ broadcast.id }})">
+                                <a href="{{ url_for('view_broadcast', broadcast_id=broadcast.id) }}" class="btn btn-outline-primary">
                                     <i class="bi bi-eye"></i> View Full
-                                </button>
+                                </a>
                                 {% if broadcast.file_path %}
                                 <a href="{{ url_for('api_download_file', file_type='digest', filename=broadcast.file_path.split('/')[-1]) }}" 
                                    class="btn btn-outline-success">
                                     <i class="bi bi-download"></i> Download
                                 </a>
                                 {% endif %}
-                                <button class="btn btn-outline-info" onclick="shareBroadcast({{ broadcast.id }})">
+                                <button class="btn btn-outline-info" onclick="shareBroadcast('{{ broadcast.id }}')">
                                     <i class="bi bi-share"></i> Share
                                 </button>
                             </div>
@@ -420,22 +420,64 @@ function viewSummary(articleId) {
 }
 
 function shareBroadcast(broadcastId) {
-    const broadcastData = {{ broadcasts|tojson|safe }}.find(b => b.id === broadcastId);
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     
-    if (broadcastData && navigator.share) {
-        navigator.share({
-            title: 'News Digest - ' + broadcastData.created_at,
-            text: broadcastData.broadcast_text.substring(0, 200) + '...',
-            url: window.location.href
-        });
-    } else {
-        // Fallback: copy to clipboard
+    if (isLocalhost) {
+        // For localhost: copy the broadcast text content
+        const broadcastData = {{ broadcasts|tojson|safe }}.find(b => b.id == broadcastId);
+        
         if (broadcastData) {
-            navigator.clipboard.writeText(broadcastData.broadcast_text).then(() => {
-                showAlert('Broadcast copied to clipboard!', 'success');
+            const textToCopy = `News Digest - ${broadcastData.created_at}\n\n${broadcastData.broadcast_text}`;
+            
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                showShareSuccess('Text Copied!');
+            }).catch(err => {
+                console.error('Failed to copy text:', err);
+                window.open('/broadcast/' + broadcastId, '_blank');
             });
+        } else {
+            window.open('/broadcast/' + broadcastId, '_blank');
+        }
+    } else {
+        // For production: share the actual URL
+        const shareUrl = `${window.location.origin}/broadcast/${broadcastId}`;
+        
+        if (navigator.share) {
+            navigator.share({
+                title: 'News Digest',
+                text: 'Check out this news digest',
+                url: shareUrl
+            }).catch(err => {
+                // Fallback to copying URL
+                copyShareUrl(shareUrl);
+            });
+        } else {
+            copyShareUrl(shareUrl);
         }
     }
+}
+
+function copyShareUrl(url) {
+    navigator.clipboard.writeText(url).then(() => {
+        showShareSuccess('Link Copied!');
+    }).catch(err => {
+        console.error('Failed to copy URL:', err);
+        alert('Share URL: ' + url);
+    });
+}
+
+function showShareSuccess(message) {
+    const btn = event.target.closest('button');
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = `<i class="bi bi-check"></i> ${message}`;
+    btn.classList.remove('btn-outline-info');
+    btn.classList.add('btn-success');
+    
+    setTimeout(() => {
+        btn.innerHTML = originalHtml;
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-outline-info');
+    }, 2000);
 }
 
 function copyBroadcast() {

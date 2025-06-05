@@ -15,8 +15,11 @@ document.addEventListener('DOMContentLoaded', function() {
     loadTheme();
     setupThemeListener();
     
-    // Initialize any existing generation status
-    checkGenerationStatus();
+    // Only check generation status if we're actively generating (not on page reload)
+    const isActiveGeneration = sessionStorage.getItem('news02_generation_active') === 'true';
+    if (isActiveGeneration) {
+        checkGenerationStatus();
+    }
 });
 
 // Generation functions
@@ -27,6 +30,9 @@ function startGeneration() {
             btn.innerHTML = '<i class="bi bi-arrow-repeat spinning"></i> Starting...';
             btn.disabled = true;
         }
+        
+        // Mark that we're starting an active generation
+        sessionStorage.setItem('news02_generation_active', 'true');
         
         fetch('/api/generate_digest', {
             method: 'POST',
@@ -42,11 +48,13 @@ function startGeneration() {
             } else {
                 showAlert('Failed to start generation: ' + data.error, 'danger');
                 resetGenerateButton();
+                sessionStorage.removeItem('news02_generation_active');
             }
         })
         .catch(error => {
             showAlert('Error starting generation: ' + error.message, 'danger');
             resetGenerateButton();
+            sessionStorage.removeItem('news02_generation_active');
         });
     }
 }
@@ -70,19 +78,23 @@ function checkGenerationStatus() {
                 if (generationStatusInterval) {
                     clearInterval(generationStatusInterval);
                     generationStatusInterval = null;
-                }
-                
-                setTimeout(() => {
-                    document.getElementById('generationStatus').style.display = 'none';
-                    resetGenerateButton();
                     
-                    if (data.error) {
-                        showAlert('Generation failed: ' + data.error, 'danger');
-                    } else if (data.result_file) {
-                        showAlert('Digest generated successfully!', 'success');
-                        showGenerationResult(data.result_file);
-                    }
-                }, 2000);
+                    // Clear the active generation flag
+                    sessionStorage.removeItem('news02_generation_active');
+                    
+                    // Only show completion notification if we were actively monitoring
+                    setTimeout(() => {
+                        document.getElementById('generationStatus').style.display = 'none';
+                        resetGenerateButton();
+                        
+                        if (data.error) {
+                            showAlert('Generation failed: ' + data.error, 'danger');
+                        } else if (data.result_file) {
+                            showAlert('Digest generated successfully!', 'success');
+                            showGenerationResult(data.result_file);
+                        }
+                    }, 2000);
+                }
             }
         })
         .catch(error => {

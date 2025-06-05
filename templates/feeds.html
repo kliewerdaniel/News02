@@ -53,9 +53,43 @@
                             <button type="button" class="btn btn-outline-secondary ms-2" onclick="exportFeeds()">
                                 <i class="bi bi-download"></i> Export OPML
                             </button>
+                            <button type="button" class="btn btn-outline-success ms-2" data-bs-toggle="modal" data-bs-target="#profileModal">
+                                <i class="bi bi-bookmark"></i> Manage Profiles
+                            </button>
                         </div>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <!-- RSS Profile Management -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-bookmark-star"></i> RSS Profiles
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <select class="form-select" id="profileSelect">
+                            <option value="">Select a profile to load...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-outline-primary w-100" onclick="loadSelectedProfile()">
+                            <i class="bi bi-download"></i> Load Profile
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <small class="text-muted">Save your current feeds as a profile or load a saved configuration</small>
+                </div>
+                <div id="profileStatus" style="display: none;" class="mt-2">
+                    <div class="alert alert-info mb-0">
+                        <small id="profileStatusText"></small>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -239,6 +273,65 @@
     </div>
 </div>
 
+<!-- RSS Profile Management Modal -->
+<div class="modal fade" id="profileModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-bookmark-star"></i> Manage RSS Profiles
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Create New Profile -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">
+                            <i class="bi bi-plus-circle"></i> Save Current Feeds as Profile
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Profile Name</label>
+                            <input type="text" class="form-control" id="newProfileName"
+                                   placeholder="e.g., Tech News, World Events, Finance">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description (Optional)</label>
+                            <textarea class="form-control" id="newProfileDescription" rows="2"
+                                      placeholder="Brief description of this feed collection"></textarea>
+                        </div>
+                        <button class="btn btn-primary" onclick="saveCurrentAsProfile()">
+                            <i class="bi bi-save"></i> Save Profile
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Existing Profiles -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">
+                            <i class="bi bi-list"></i> Existing Profiles
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="profilesList">
+                            <div class="text-center text-muted py-3">
+                                <i class="bi bi-inbox fs-3"></i>
+                                <p class="mt-2">No profiles saved yet</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Import OPML Modal -->
 <div class="modal fade" id="importModal" tabindex="-1">
     <div class="modal-dialog">
@@ -265,6 +358,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('feedsForm').addEventListener('submit', saveFeeds);
     initializeFeedDiscovery();
+    loadProfiles(); // Load RSS profiles on page load
     
     // Add enter key support for search
     document.getElementById('feedSearchInput').addEventListener('keypress', function(e) {
@@ -944,17 +1038,254 @@ function validateSingleFeed() {
     
     resultDiv.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Validating...';
     
-    // This would need to be implemented in the backend
-    setTimeout(() => {
+    fetch('/api/test_feed', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({url: feedUrl})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success alert-sm">
+                    <strong>Valid Feed!</strong><br>
+                    Title: ${data.title || 'Unknown'}<br>
+                    Articles: ${data.articles || 0}<br>
+                    Last Updated: ${data.last_updated || 'Unknown'}
+                </div>
+            `;
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger alert-sm">
+                    <strong>Invalid Feed</strong><br>
+                    Error: ${data.error || 'Unknown error'}
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
         resultDiv.innerHTML = `
-            <div class="alert alert-success alert-sm">
-                <strong>Valid Feed!</strong><br>
-                Title: Example News Feed<br>
-                Articles: 25<br>
-                Last Updated: 2 hours ago
+            <div class="alert alert-danger alert-sm">
+                <strong>Error</strong><br>
+                ${error.message}
             </div>
         `;
-    }, 1500);
+    });
+}
+
+// RSS Profile Management Functions
+function loadProfiles() {
+    fetch('/api/rss_profiles')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateProfilesDropdown(data.profiles);
+                updateProfilesList(data.profiles);
+            } else {
+                console.error('Error loading profiles:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading profiles:', error);
+        });
+}
+
+function updateProfilesDropdown(profiles) {
+    const select = document.getElementById('profileSelect');
+    select.innerHTML = '<option value="">Select a profile to load...</option>';
+    
+    Object.keys(profiles).forEach(profileName => {
+        const profile = profiles[profileName];
+        const option = document.createElement('option');
+        option.value = profileName;
+        option.textContent = `${profileName} (${profile.feed_count} feeds)`;
+        select.appendChild(option);
+    });
+}
+
+function updateProfilesList(profiles) {
+    const container = document.getElementById('profilesList');
+    
+    if (Object.keys(profiles).length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted py-3">
+                <i class="bi bi-inbox fs-3"></i>
+                <p class="mt-2">No profiles saved yet</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    Object.keys(profiles).forEach(profileName => {
+        const profile = profiles[profileName];
+        const createdDate = new Date(profile.created_at).toLocaleDateString();
+        
+        html += `
+            <div class="card mb-2">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h6 class="card-title mb-1">${profileName}</h6>
+                            <p class="card-text text-muted small mb-1">
+                                ${profile.description || 'No description'}
+                            </p>
+                            <small class="text-muted">
+                                ${profile.feed_count} feeds • Created ${createdDate}
+                            </small>
+                        </div>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary" onclick="loadProfile('${profileName}')">
+                                <i class="bi bi-download"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="deleteProfile('${profileName}')">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function saveCurrentAsProfile() {
+    const nameInput = document.getElementById('newProfileName');
+    const descriptionInput = document.getElementById('newProfileDescription');
+    
+    const profileName = nameInput.value.trim();
+    const description = descriptionInput.value.trim();
+    
+    if (!profileName) {
+        showAlert('Please enter a profile name', 'warning');
+        return;
+    }
+    
+    // Get current feeds
+    const inputs = document.querySelectorAll('input[name="feeds[]"]');
+    const feeds = Array.from(inputs)
+        .map(input => input.value.trim())
+        .filter(url => url && url.startsWith('http'));
+    
+    if (feeds.length === 0) {
+        showAlert('No valid feeds to save in profile', 'warning');
+        return;
+    }
+    
+    const profileData = {
+        name: profileName,
+        description: description,
+        feeds: feeds
+    };
+    
+    fetch('/api/rss_profiles', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(profileData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(data.message, 'success');
+            nameInput.value = '';
+            descriptionInput.value = '';
+            loadProfiles(); // Refresh the lists
+        } else {
+            showAlert('Error saving profile: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        showAlert('Error saving profile: ' + error.message, 'danger');
+    });
+}
+
+function loadProfile(profileName) {
+    fetch(`/api/rss_profiles/${encodeURIComponent(profileName)}/load`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(data.message, 'success');
+            
+            // Reload the page to show the new feeds
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showAlert('Error loading profile: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        showAlert('Error loading profile: ' + error.message, 'danger');
+    });
+}
+
+function loadSelectedProfile() {
+    const select = document.getElementById('profileSelect');
+    const profileName = select.value;
+    
+    if (!profileName) {
+        showAlert('Please select a profile to load', 'warning');
+        return;
+    }
+    
+    loadProfile(profileName);
+    
+    // Show status
+    const statusDiv = document.getElementById('profileStatus');
+    const statusText = document.getElementById('profileStatusText');
+    statusText.textContent = `Loading profile: ${profileName}...`;
+    statusDiv.style.display = 'block';
+    
+    setTimeout(() => {
+        statusDiv.style.display = 'none';
+    }, 3000);
+}
+
+function deleteProfile(profileName) {
+    if (!confirm(`Are you sure you want to delete the profile "${profileName}"? This action cannot be undone.`)) {
+        return;
+    }
+    
+    fetch(`/api/rss_profiles/${encodeURIComponent(profileName)}`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(data.message, 'success');
+            loadProfiles(); // Refresh the lists
+        } else {
+            showAlert('Error deleting profile: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        showAlert('Error deleting profile: ' + error.message, 'danger');
+    });
+}
+
+// Utility function to show alerts
+function showAlert(message, type) {
+    // Create alert element
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 300px;';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
 }
 </script>
 {% endblock %}

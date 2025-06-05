@@ -1,5 +1,5 @@
 Update Notes 6/5/2025:
-- Working on fixing jobs, and adding an api service. Eventually this should lead to being able to prop this behind a secure proxy server, and run api requests to collect the broadcasts to then add to other external services. I have a discord bot project that could use this on top of its design to already update selected discord servers with youtube channel updates, subreddit updates, newsapi updates, and then hopefully add this news digest as a bi-daily updater as well for news on specific RSS Profiles set for Political news, Tech, and Financial updates. (Most of this I have completed locally and need to test and push today at some point once tested more.)
+- Added API server, and fixed jobs by adding an additional jobs server that will check forjobs to do every 10 minutes. This is officially finished the first full version of features, and here on will just be refactoring, optimizing, and fixing bugs.
 
 <img src="https://github.com/user-attachments/assets/d38d03a3-6a7d-4617-b09c-103421e89cf9" width="49%"> <img src="https://github.com/user-attachments/assets/13e20837-117a-4a53-b8b5-0ca511b42009" width="49%">
 
@@ -14,125 +14,81 @@ Transform RSS feeds into personalized AI-generated news digests with professiona
 
 ## 🚀 Quick Start
 
-### Easy Setup (Recommended)
-Get up and running in minutes with automatic setup:
+Get your News02 system running in minutes with these simple steps:
 
-**Windows:** Double-click `quick_setup.bat`  
-**Linux/Mac:** Run `./quick_setup.sh`
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/ETomberg391/News02 # Replace with actual repo URL
+    cd News02
+    ```
+2.  **Run the quick setup script:**
+    *   **Windows:** Double-click `quick_setup.bat`
+    *   **Linux/Mac:** Run `./quick_setup.sh`
+    This script will automatically create a virtual environment, install dependencies, clone the RSS feed discovery database, and set up configuration files.
 
-This will:
-- ✅ Create virtual environment
-- ✅ Install all dependencies
-- ✅ Clone RSS feed discovery database (300+ feeds)
-- ✅ Set up configuration files
-- ✅ Test installation
-- ✅ Show you exactly how to run the web GUI
+3.  **Activate the virtual environment:**
+    *   **Linux/Mac:** `source venv/bin/activate`
+    *   **Windows:** `venv\Scripts\activate`
 
-### Manual Setup
-If you prefer manual control:
-```bash
-python auto_setup.py
-```
+4.  **Launch the servers:**
+    ```bash
+    python start_servers.py
+    ```
+    This will start the web interface (usually at `http://127.0.0.1:5000`) and the remote API server.
 
 ## 🌐 Web Dashboard
 
-After setup, launch the modern web interface:
-```bash
-# Activate virtual environment
-source venv/bin/activate  # Linux/Mac
-venv\Scripts\activate     # Windows
+After launching the servers, open your web browser and navigate to `http://127.0.0.1:5000` to access the modern web interface.
 
-# Start web interface
-python run_web.py
+## ✨ Key Features
 
-# Open: http://127.0.0.1:5000
-```
-
-## ✨ Enhanced Features
+News02 offers a rich set of features designed for a professional news digest experience:
 
 ### 🤖 Multi-Provider LLM Support with Smart Rate Limiting
-- **Ollama** - Local inference (Mistral, Llama, etc.)
-- **OpenAI-Compatible** - vLLM, LocalAI, and other APIs
-- **Google Gemini** - Cloud-based AI with intelligent rate limiting for free tier
-- **Automatic Rate Management** - Prevents 429 errors with smart delays
+-   Integrates with **Ollama** (for local inference), **OpenAI-Compatible** APIs (vLLM, LocalAI), and **Google Gemini** (cloud-based).
+-   **Automatic Rate Management** prevents `429` errors with intelligent delays, optimizing usage for free tiers.
 
-### 🌐 Professional Web Experience
-- **Real-time Dashboard** - Monitor generation progress with detailed statistics
-- **News Lounge** - Comfortable viewing and listening experience
-- **Feed Management** - Add, test, and organize RSS feeds with reliability testing
-- **Settings Panel** - Configure LLM providers with live connection testing
-- **Mobile Responsive** - Works perfectly on phones, tablets, desktops
+### 🌐 Comprehensive Web Interface (WebGUI)
+-   **Real-time Dashboard**: Monitor digest generation progress and system statistics.
+-   **News Lounge**: A comfortable interface for viewing and listening to generated digests.
+-   **Feed Management**: Easily add, test, and organize RSS feeds with built-in reliability testing.
+-   **Settings Panel**: Configure LLM providers, API keys, and other system preferences with live connection testing.
+-   **Mobile Responsive**: Optimized for seamless use across phones, tablets, and desktops.
 
-### 🎧 News Lounge Experience
-- **Audio Player** - Full HTML5 controls with progress tracking
-- **Reading Mode** - Comfortable text viewing with typography optimization
-- **Full-Screen Modal** - Distraction-free reading experience
-- **Sources Modal** - Complete transparency with clickable article sources
-- **Download Options** - Save both text and audio content
+### ⚙️ Automated Job Scheduling
+-   **Jobs Page**: Schedule automated digest generations based on RSS profiles.
+-   **Flexible Scheduling**: Set daily, weekday, weekend, or one-time jobs with precise timing.
+-   **Customizable Output**: Define specific LLM models and article limits for each scheduled job.
+-   **Queue Management**: Ensures efficient processing with conflict prevention and real-time status updates.
 
-### 💾 Advanced Database Management
-- **SQLite Storage** - Persistent article and summary storage
-- **Real-time Analytics** - Feed performance and processing statistics
-- **Smart Deduplication** - Avoid processing duplicate articles
-- **History Tracking** - Browse past digests and summaries
-- **Database Tools** - Reset, cleanup, and nuclear wipe options
+### 💾 Robust Database Management
+-   **SQLite Storage**: Persistently stores articles, summaries, and generated digests.
+-   **Real-time Analytics**: Provides insights into feed performance and processing statistics.
+-   **Smart Deduplication**: Avoids reprocessing duplicate articles.
+-   **History Tracking**: Browse and access past digests and summaries.
+-   **Database Tools**: Options to reset, clean up, or wipe the database.
 
-### 🎵 Professional Audio Generation
-- **Text-to-Speech** - Multiple voice options via Microsoft Edge TTS
-- **News Anchor Style** - Professional broadcast format with transitions
-- **Audio Player** - Play generated content with full browser controls
-- **Download Options** - Save MP3 files locally
+### 🎵 Audio Generation (TTS)
+-   **Text-to-Speech**: Generates high-quality audio narration using multiple voice options via Microsoft Edge TTS.
+-   **News Anchor Style**: Formats broadcasts professionally with transitions.
+-   **Integrated Audio Player**: Play generated content directly within the web interface.
+-   **Download Options**: Save MP3 audio files locally.
 
 ### 📋 Complete Source Transparency
-- **Article Sources** - Individual article tracking with titles and URLs
-- **Source Statistics** - "X articles from Y sources" with accurate counts
-- **Clickable Sources** - Direct links to original articles
-- **Copy Functionality** - Easy URL copying for sharing and verification
+-   **Detailed Article Sources**: Tracks individual articles with titles and original URLs.
+-   **Source Statistics**: Provides counts like "X articles from Y sources."
+-   **Clickable Sources**: Direct links to original articles for verification.
+-   **Copy Functionality**: Easily copy URLs for sharing.
 
-## 📊 Enhanced Web Dashboard
-
-### Dashboard
-- **Live Processing Monitor** - Real-time generation progress
-- **Article Statistics** - "📥 32 found, ✅ 28 processed, ❌ 4 failed"
-- **Feed Analytics** - Performance charts and success rates
-- **Quick Actions** - One-click digest generation
-
-### News Lounge
-- **Digest Library** - Browse all generated content with audio indicators
-- **Audio Playback** - Professional player with progress controls
-- **Reading Modes** - Normal and full-screen comfortable reading
-- **Sources Display** - Complete article transparency with links
-
-### Settings
-- **Provider Testing** - Live LLM and database connection validation
-- **Rate Limiting** - Configure intelligent API management
-- **Model Configuration** - Visual model selection and testing
-- **Database Management** - Reset, cleanup, and nuclear options
-
-### 🔍 RSS Feed Discovery Tool
-- **300+ Curated Feeds** - Automatically cloned from awesome-rss-feeds repository
-- **Smart Search** - Find feeds by topic, keyword, or category
-- **English-Only Filter** - Focus on quality English-language sources
-- **Country-Based Categories** - Browse feeds by country (US, UK, Canada, etc.)
-- **Topic Categories** - Technology, News, Programming, Business, Science, and more
-- **One-Click Adding** - Test and add feeds directly to your list
-- **Live Feed Testing** - Verify feeds work before adding them
-
-### Feed Management
-- **Reliability Testing** - Test individual feeds before adding
-- **Real-time Validation** - Instant feedback on feed health
-- **Curated Sources** - Pre-tested reliable RSS feeds included
-- **Error Handling** - Clear feedback on failed or blocked sources
-
-### History & Analytics
-- **Processing Statistics** - Detailed success/failure breakdowns
-- **Content Archive** - Generated broadcast history with search
-- **Audio Library** - Play past digests with full controls
-- **Performance Tracking** - Monitor system efficiency over time
+### 🔍 Advanced RSS Feed Discovery
+-   **300+ Curated Feeds**: Automatically cloned from the `awesome-rss-feeds` repository.
+-   **Smart Search & Filters**: Find feeds by topic, keyword, category, or country (e.g., English-only, US, UK).
+-   **One-Click Adding**: Test and add feeds directly to your collection.
+-   **Live Feed Testing**: Verify feed functionality before adding.
 
 ## 🔧 Configuration
 
-### Environment Variables (.env)
+### Environment Variables (.env) (Also handled in the WebGUI via Settings page)
 ```env
 # LLM Provider Selection
 LLM_PROVIDER=gemini
@@ -188,39 +144,21 @@ feeds:
   - "https://feeds.feedburner.com/venturebeat/SZYF"     # VentureBeat
 ```
 
-## 🛠️ Command Line Usage
-
-For advanced users, command-line tools remain available:
-
-```bash
-# Generate digest with enhanced processing
-python news_digest_enhanced.py
-
-# Test all connections and configurations
-python news_cli.py test-all
-
-# View detailed analytics and statistics
-python news_cli.py analytics
-
-# Database management and cleanup
-python news_cli.py cleanup --days 30
-```
-
-## 📁 Enhanced Project Structure
+## 📁 Project Structure
 
 ```
 News02/
-├── 🌐 Professional Web Interface
+├── 🌐 Web Interface
 │   ├── web_app.py              # Enhanced Flask application
 │   ├── run_web.py              # Web launcher
-│   ├── templates/              # Professional HTML templates
+│   ├── templates/              # HTML templates
 │   │   ├── lounge.html         # News consumption interface
 │   │   ├── dashboard.html      # Real-time monitoring
 │   │   ├── feeds.html          # Feed discovery & management
 │   │   └── settings.html       # Configuration management
 │   └── static/                 # Modern CSS, JS, images
 ├── 🤖 Enhanced Core System
-│   ├── news_digest_enhanced.py # Professional broadcast generation
+│   ├── news_digest_enhanced.py # broadcast generation
 │   ├── llm_client.py          # Multi-provider with rate limiting
 │   ├── config_manager.py       # Advanced configuration handling
 │   ├── database.py            # Enhanced SQLite integration
@@ -231,7 +169,7 @@ News02/
 │   ├── .env                   # Environment variables
 │   ├── feeds.yaml             # Curated reliable RSS feeds
 │   └── settings/              # Model configurations
-└── 🛠️ Professional Tools
+└── 🛠️ Tools
     ├── auto_setup.py          # Intelligent setup script
     ├── quick_setup.bat/.sh    # Platform launchers
     └── news_cli.py            # Enhanced command-line utilities
@@ -239,20 +177,24 @@ News02/
 
 ## 📚 Documentation
 
-- **[📖 Setup Guide](README_SETUP.md)** - Detailed installation instructions
-- **[🌐 Web Interface](README_WEB.md)** - Web dashboard documentation  
-- **[🔧 Enhanced Features](README_ENHANCED.md)** - Advanced configuration
-- **[⚡ Architecture](flow.md)** - Technical implementation details
+Here are detailed guides and examples for advanced usage and deployment:
 
-## 🎯 Professional Workflow
+- **[🚀 Deployment Guide](documents/DEPLOYMENT_GUIDE.md)**: Comprehensive instructions for deploying News02 in a production environment, including Nginx, Docker, and SSL/TLS configurations. It covers single instance and separate service architectures.
+- **[⚙️ Jobs System](documents/JOBS_SYSTEM_README.md)**: Documentation for setting up and managing automated, scheduled RSS digest generation. Learn how to create RSS profiles, schedule jobs with flexible recurrence, and monitor job execution.
+- **[☁️ Proxy Deployment](documents/PROXY_DEPLOYMENT.md)**: A guide for deploying News02 behind a proxy server like Cloudflare or Nginx, simplifying SSL and domain management.
+- **[📡 Remote API](documents/REMOTE_API_README.md)**: Detailed documentation for the News02 Remote Digest API, enabling external applications to securely access generated digests, server statistics, and RSS profiles. Includes API key authentication, rate limiting, and usage examples.
+- **[CLI Usage Examples](documents/usage_examples.md)**: Provides various command-line examples for launching News02 servers with different configurations, useful for development, testing, and public demos.
 
-1. **Setup** - Run quick setup script for automatic configuration
-2. **Configure** - Set LLM provider with live connection testing
-3. **Discover Feeds** - Browse 300+ curated feeds or search by topic/country
-4. **Manage Feeds** - Add reliable RSS feeds with validation
-5. **Generate** - Click "Generate Digest" and monitor real-time progress
-6. **Experience** - Professional lounge with audio playback and source tracking
-7. **Manage** - Database tools for maintenance and optimization
+## 🎯 Core Workflow
+
+Here's the typical workflow for using News02:
+
+1.  **Setup**: Follow the "Quick Start" guide to get the system installed and running.
+2.  **Configure**: Access the web dashboard's "Settings" page to configure your LLM providers and other preferences.
+3.  **Discover & Manage Feeds**: Use the "Feeds" page to browse over 300 curated RSS feeds, search for new ones, and add them to your collection.
+4.  **Generate Digests**: Manually generate digests from your selected feeds, or schedule automated jobs via the "Jobs" page.
+5.  **Consume Content**: Enjoy your personalized news digests in the "News Lounge" with integrated audio playback and full source transparency.
+6.  **Monitor & Maintain**: Use the "Dashboard" for real-time monitoring and the "History" page for past digests and analytics.
 
 ### 🔍 Feed Discovery Workflow
 1. **Browse Categories** - Click "English Only" for quality sources or explore by topic
@@ -273,52 +215,22 @@ News02/
 ## 🔍 System Requirements
 
 ### Minimum
-- **Python 3.8+** with pip
-- **2GB RAM** for basic operation
-- **Internet connection** for RSS feeds and LLM APIs
-- **Modern web browser** for dashboard interface
+-   **Python 3.8+** with pip
+-   **2GB RAM** for basic operation
+-   **Internet connection** for RSS feeds and LLM APIs
+-   **Modern web browser** for the web dashboard
 
 ### Recommended
-- **Python 3.10+** for optimal performance
-- **4GB+ RAM** for faster processing
-- **SSD storage** for database performance
-- **Chrome/Firefox** for best web experience
-
-### Optional Enhancements
-- **Ollama** for local LLM inference
-- **CUDA/ROCm** for GPU acceleration
-- **Google Gemini API** for cloud processing
-
-## 🚦 Rate Limiting & Performance
-
-### Intelligent API Management
-- **Automatic rate detection** and prevention
-- **Smart delays** to avoid 429 errors
-- **Free tier optimization** for Google Gemini
-- **Progress monitoring** with detailed statistics
-
-### Processing Statistics
-```
-🔍 ARTICLE PROCESSING SUMMARY:
-   📥 Total articles found: 32
-   ✅ Successfully processed: 28
-   ❌ Failed/skipped: 4
-   📊 Success rate: 87.5%
-```
-
-## 🆘 Support
-
-### Quick Help
-1. **Setup Issues**: Check [`README_SETUP.md`](README_SETUP.md)
-2. **Web Interface**: See [`README_WEB.md`](README_WEB.md)
-3. **Configuration**: Review [`.env`](.env) and [`settings/`](settings/)
-4. **Testing**: Run `python news_cli.py test-all`
+-   **Python 3.10+** for optimal performance
+-   **4GB+ RAM** for faster processing and larger models
+-   **SSD storage** for improved database performance
+-   **Chrome/Firefox** for the best web experience
 
 ### Common Issues
-- **Port conflicts**: Change `WEB_PORT` in `.env`
-- **Import errors**: Ensure virtual environment is activated
-- **LLM failures**: Test connections in Settings tab
-- **Feed errors**: Validate URLs in Feeds tab
+-   **Port conflicts**: If the web interface or API server fails to start, try changing `WEB_PORT` or `REMOTE_API_PORT` in your `.env` file.
+-   **Import errors**: Ensure your Python virtual environment is activated before running scripts.
+-   **LLM failures**: Verify your LLM provider connections and API keys in the web dashboard's "Settings" tab.
+-   **Feed errors**: Use the "Feeds" tab in the web interface to validate RSS feed URLs and check their health.
 
 ## 📄 License
 
@@ -328,11 +240,10 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 - **awesome-rss-feeds** - Curated RSS feed collection by plenaryapp
 - **Ollama** - Local LLM inference platform
-- **OpenAI** - API standards and models
 - **Google** - Gemini AI integration
 - **Microsoft** - Edge TTS service
-- **Bootstrap** - Web interface framework
+-   **Bootstrap**: Web interface framework for responsive design.
 
 ---
 
-**🚀 Ready to get started?** Run the setup script and have your AI news digest system running in minutes!
+**🚀 Ready to get started?** Follow the "Quick Start" guide above to deploy your AI news digest system!

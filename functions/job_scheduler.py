@@ -13,8 +13,9 @@ import os
 logger = logging.getLogger(__name__)
 
 class JobScheduler:
-    def __init__(self, db_path='jobs.db'):
-        self.db_path = db_path
+    def __init__(self, db_path=None):
+        # Use environment variable or default
+        self.db_path = db_path or os.getenv('JOBS_DATABASE_PATH', 'data/jobs.db')
         self.running = False
         self.current_job = None
         self.job_queue = []
@@ -41,6 +42,7 @@ class JobScheduler:
                 articles_per_feed INTEGER DEFAULT 1,
                 summary_model TEXT DEFAULT 'default_model',
                 broadcast_model TEXT DEFAULT 'broadcast_model',
+                tts_voice TEXT DEFAULT NULL,
                 recurrence TEXT DEFAULT 'once',
                 enabled BOOLEAN DEFAULT TRUE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -69,6 +71,13 @@ class JobScheduler:
             CREATE INDEX IF NOT EXISTS idx_jobs_enabled ON scheduled_jobs(enabled);
         """)
         
+        # Migration: Add tts_voice column if it doesn't exist
+        cursor.execute("PRAGMA table_info(scheduled_jobs)")
+        columns = [row[1] for row in cursor.fetchall()]
+        if 'tts_voice' not in columns:
+            cursor.execute("ALTER TABLE scheduled_jobs ADD COLUMN tts_voice TEXT DEFAULT NULL")
+            logger.info("Added tts_voice column to scheduled_jobs table")
+        
         conn.commit()
         conn.close()
         logger.info(f"Job scheduler database initialized: {self.db_path}")
@@ -86,15 +95,15 @@ class JobScheduler:
             next_run = self._calculate_next_run(job_data['time'], job_data['recurrence'])
             
             cursor.execute("""
-                INSERT INTO scheduled_jobs 
-                (id, name, time, profile, articles_per_feed, summary_model, 
-                 broadcast_model, recurrence, enabled, next_run)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO scheduled_jobs
+                (id, name, time, profile, articles_per_feed, summary_model,
+                 broadcast_model, tts_voice, recurrence, enabled, next_run)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 job_id, job_data['name'], job_data['time'], job_data['profile'],
                 job_data['articles_per_feed'], job_data['summary_model'],
-                job_data['broadcast_model'], job_data['recurrence'], 
-                job_data['enabled'], next_run
+                job_data['broadcast_model'], job_data.get('tts_voice'),
+                job_data['recurrence'], job_data['enabled'], next_run
             ))
             
             conn.commit()
@@ -152,8 +161,8 @@ class JobScheduler:
             values = []
             
             for key, value in updates.items():
-                if key in ['name', 'time', 'profile', 'articles_per_feed', 'summary_model', 
-                          'broadcast_model', 'recurrence', 'enabled', 'next_run', 'last_run',
+                if key in ['name', 'time', 'profile', 'articles_per_feed', 'summary_model',
+                          'broadcast_model', 'tts_voice', 'recurrence', 'enabled', 'next_run', 'last_run',
                           'run_count', 'success_count', 'last_error', 'last_output']:
                     set_clauses.append(f"{key} = ?")
                     values.append(value)
@@ -255,44 +264,77 @@ class JobScheduler:
     
     def _scheduler_loop(self):
         """Main scheduler loop"""
+        logger.info("Scheduler loop started")
         while self.running:
             try:
                 # Process immediate queue first
                 if self.job_queue and not self.execution_status['running']:
                     job = self.job_queue.pop(0)
+                    logger.info(f"Executing immediate job: {job['name']}")
                     self._execute_job(job)
                 
                 # Check for scheduled jobs
                 if not self.execution_status['running']:
                     due_jobs = self._get_due_jobs()
                     if due_jobs:
+                        logger.info(f"Found {len(due_jobs)} due jobs, executing: {due_jobs[0]['name']}")
                         self._execute_job(due_jobs[0])
+                    else:
+                        # Log current time and next job times for debugging
+                        now = datetime.now()
+                        all_jobs = self.get_jobs()
+                        enabled_jobs = [j for j in all_jobs if j['enabled'] and j['next_run']]
+                        if enabled_jobs:
+                            logger.debug(f"Current time: {now.isoformat()}")
+                            for job in enabled_jobs[:3]:  # Log next 3 jobs
+                                logger.debug(f"Job '{job['name']}' next run: {job['next_run']}")
                 
-                time.sleep(30)  # Check every 30 seconds
+                time.sleep(10)  # Check every 10 seconds instead of 30
                 
             except Exception as e:
                 logger.error(f"Error in scheduler loop: {e}")
-                time.sleep(60)  # Wait longer on error
+                import traceback
+                traceback.print_exc()
+                time.sleep(30)  # Wait on error
     
     def _get_due_jobs(self) -> List[Dict[str, Any]]:
         """Get jobs that are due to run"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
-        now = datetime.now().isoformat()
+        now = datetime.now()
+        now_iso = now.isoformat()
         
         cursor.execute("""
-            SELECT * FROM scheduled_jobs 
-            WHERE enabled = TRUE 
-            AND next_run IS NOT NULL 
+            SELECT * FROM scheduled_jobs
+            WHERE enabled = TRUE
+            AND next_run IS NOT NULL
             AND next_run <= ?
             ORDER BY next_run ASC
-        """, (now,))
+        """, (now_iso,))
         
         columns = [description[0] for description in cursor.description]
         jobs = [dict(zip(columns, row)) for row in cursor.fetchall()]
-        conn.close()
         
+        # Debug logging
+        if jobs:
+            logger.info(f"Found {len(jobs)} due jobs at {now_iso}")
+            for job in jobs:
+                logger.info(f"Due job: {job['name']} (scheduled: {job['next_run']})")
+        else:
+            # Check all enabled jobs for debugging
+            cursor.execute("""
+                SELECT name, next_run FROM scheduled_jobs
+                WHERE enabled = TRUE AND next_run IS NOT NULL
+                ORDER BY next_run ASC
+            """)
+            all_enabled = cursor.fetchall()
+            if all_enabled:
+                logger.debug(f"No due jobs found. Current time: {now_iso}")
+                for name, next_run in all_enabled[:3]:
+                    logger.debug(f"Upcoming job: {name} at {next_run}")
+        
+        conn.close()
         return jobs
     
     def _execute_job(self, job: Dict[str, Any]):
@@ -353,10 +395,9 @@ class JobScheduler:
             })
             broadcast = generate_broadcast_with_llm(summaries)
             
-            # Save files
+            # Save files with profile name
             self.execution_status.update({'progress': 90, 'stage': 'Saving files'})
-            digest_path = save_digest(broadcast, summaries=summaries, 
-                                    job_name=job['name'].replace(' ', '_'))
+            digest_path = save_digest(broadcast, summaries=summaries, job_name=job['profile'])
             
             # Generate audio
             self.execution_status.update({'progress': 95, 'stage': 'Generating audio'})
@@ -368,8 +409,23 @@ class JobScheduler:
             loop.run_until_complete(text_to_speech(broadcast, output_path=mp3_path))
             loop.close()
             
+            # Store broadcast in database
+            try:
+                from functions.database import NewsDatabase
+                from functions.config_manager import config_manager
+                
+                db_config = config_manager.get_database_config()
+                if db_config['enabled']:
+                    database = NewsDatabase(db_config['path'])
+                    broadcast_model = job.get('broadcast_model', 'broadcast_model')
+                    database.store_broadcast(broadcast, broadcast_model, len(summaries),
+                                           digest_path, mp3_path)
+                    logger.info("Stored broadcast in database")
+            except Exception as e:
+                logger.warning(f"Failed to store broadcast in database: {e}")
+            
             # Complete execution
-            self._complete_job_execution(execution_id, 'completed', 
+            self._complete_job_execution(execution_id, 'completed',
                                        digest_path, mp3_path, len(summaries))
             
             # Update job status
@@ -401,7 +457,9 @@ class JobScheduler:
     def _load_profile_feeds(self, profile_name: str) -> List[str]:
         """Load feeds from a profile"""
         try:
-            profiles_file = Path('settings/feeds/profiles.yaml')
+            # Get project root directory
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            profiles_file = Path(project_root) / 'settings' / 'feeds' / 'profiles.yaml'
             if not profiles_file.exists():
                 return []
                 
@@ -421,6 +479,11 @@ class JobScheduler:
         os.environ['MAX_ARTICLES_PER_FEED'] = str(job['articles_per_feed'])
         os.environ['SUMMARY_MODEL_CONFIG'] = job['summary_model']
         os.environ['BROADCAST_MODEL_CONFIG'] = job['broadcast_model']
+        
+        # Set TTS voice if specified, otherwise use default from .env
+        if job.get('tts_voice'):
+            os.environ['TTS_VOICE'] = job['tts_voice']
+        # If no job-specific voice, keep the existing TTS_VOICE from .env
     
     def _start_job_execution(self, job_id: str) -> int:
         """Record the start of job execution"""

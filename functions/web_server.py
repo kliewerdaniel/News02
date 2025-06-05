@@ -25,8 +25,25 @@ from functions.news_digest_enhanced import (
 from functions.news_cli import test_llm_connection, test_database
 from functions.feed_discovery import feed_discovery
 from functions.job_scheduler import job_scheduler
+from functions.remote_digest_api import remote_api, require_api_key
 
-app = Flask(__name__)
+# Helper function to get project root path
+def get_project_root():
+    """Get the project root directory path"""
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+def get_output_dir():
+    """Get the output directory path"""
+    return Path(get_project_root()) / 'output'
+
+# Create Flask app with correct template and static paths relative to project root
+project_root = get_project_root()
+template_dir = os.path.join(project_root, 'templates')
+static_dir = os.path.join(project_root, 'static')
+
+app = Flask(__name__,
+           template_folder=template_dir,
+           static_folder=static_dir)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'news02-secret-key-change-me')
 
 # Template filters
@@ -270,12 +287,23 @@ def dashboard():
     # If no broadcasts in database, get from output folder
     if not recent_broadcasts:
         from pathlib import Path
-        output_dir = Path('output')
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        output_dir = Path(project_root) / 'output'
         if output_dir.exists():
             # Get all mp3 files and create broadcast entries
-            mp3_files = sorted(output_dir.glob('digest_*.mp3'), key=lambda x: x.stat().st_mtime, reverse=True)
+            # Support both old format (digest_*.mp3) and new profile format (Profile_*.mp3)
+            mp3_files = list(output_dir.glob('digest_*.mp3')) + list(output_dir.glob('*_20*.mp3'))
+            mp3_files = sorted(mp3_files, key=lambda x: x.stat().st_mtime, reverse=True)
             recent_broadcasts = []
-            for mp3_file in mp3_files[:5]:  # Get last 5
+            processed_files = set()  # Track processed files to avoid duplicates
+            
+            for mp3_file in mp3_files[:10]:  # Get more files initially to filter duplicates
+                # Skip if we've already processed this file
+                if mp3_file.name in processed_files:
+                    continue
+                
+                processed_files.add(mp3_file.name)
+                
                 # Get corresponding markdown file
                 md_file = mp3_file.with_suffix('.md')
                 if md_file.exists():
@@ -286,6 +314,10 @@ def dashboard():
                         'model_used': 'File-based',
                         'article_count': 'N/A'  # Could parse from file if needed
                     })
+                    
+                    # Stop once we have 5 unique broadcasts
+                    if len(recent_broadcasts) >= 5:
+                        break
     
     return render_template('dashboard.html',
                          recent_articles=recent_articles,
@@ -350,6 +382,7 @@ def history():
     db = get_database()
     articles = []
     broadcasts = []
+    existing_broadcast_files = set()  # Track files already represented in DB
     
     if db:
         try:
@@ -371,31 +404,199 @@ def history():
             
             # Get broadcasts
             cursor.execute("""
-                SELECT * FROM broadcasts 
-                ORDER BY created_at DESC 
+                SELECT * FROM broadcasts
+                ORDER BY created_at DESC
                 LIMIT 20
             """)
             columns = [description[0] for description in cursor.description]
             broadcasts = [dict(zip(columns, row)) for row in cursor.fetchall()]
             
+            # Track which files are already represented in the database
+            for broadcast in broadcasts:
+                if broadcast.get('file_path'):
+                    from pathlib import Path
+                    file_path = Path(broadcast['file_path'])
+                    # Add both the full name and stem (without extension) for better matching
+                    existing_broadcast_files.add(file_path.name)
+                    existing_broadcast_files.add(file_path.stem)
+                    # Also add any timestamp-based variations
+                    if 'digest_' in file_path.name:
+                        existing_broadcast_files.add(file_path.name)
+            
             conn.close()
         except Exception as e:
             flash(f"Database error: {e}", 'error')
+    
+    # Add file-based broadcasts only if they're not already in the database
+    from pathlib import Path
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    output_dir = Path(project_root) / 'output'
+    if output_dir.exists():
+        # Get all markdown and audio files
+        md_files = list(output_dir.glob('digest_*.md')) + list(output_dir.glob('*_20*.md'))
+        file_broadcasts = []
+        processed_files = set()  # Track files we've already processed to avoid duplicates
+        
+        for md_file in sorted(md_files, key=lambda x: x.stat().st_mtime, reverse=True):
+            # Skip if this file is already represented in database broadcasts
+            # Check both the full filename and stem for better matching
+            if (md_file.name in existing_broadcast_files or
+                md_file.stem in existing_broadcast_files):
+                continue
+            
+            # Skip if we've already processed this file (prevent duplicates within file-based)
+            if md_file.name in processed_files:
+                continue
+            
+            processed_files.add(md_file.name)
+                
+            mp3_file = md_file.with_suffix('.mp3')
+            
+            # Extract article count from file if possible
+            article_count = 'N/A'
+            try:
+                with open(md_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                # Look for article count in metadata
+                for line in content.split('\n')[:10]:
+                    if 'Articles Processed:' in line:
+                        article_count = line.split(':')[1].strip()
+                        break
+            except:
+                pass
+            
+            file_broadcasts.append({
+                'id': f'file_{md_file.stem}',
+                'broadcast_text': f'File-based broadcast: {md_file.name}',
+                'model_used': 'File-based',
+                'article_count': article_count,
+                'created_at': datetime.fromtimestamp(md_file.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S'),
+                'file_path': str(md_file),
+                'audio_path': str(mp3_file) if mp3_file.exists() else None
+            })
+        
+        # Add file-based broadcasts to the list (limit total to 20)
+        broadcasts.extend(file_broadcasts[:max(0, 20 - len(broadcasts))])
+        
+        # Sort all broadcasts by creation time
+        broadcasts.sort(key=lambda x: x['created_at'], reverse=True)
     
     return render_template('history.html',
                          articles=articles,
                          broadcasts=broadcasts)
 
+@app.route('/broadcast/<broadcast_id>')
+def view_broadcast(broadcast_id):
+    """View full broadcast content"""
+    db = get_database()
+    broadcast = None
+    
+    # First try to get from database
+    if db and not broadcast_id.startswith('file_'):
+        try:
+            import sqlite3
+            conn = sqlite3.connect(db.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT * FROM broadcasts WHERE id = ?
+            """, (broadcast_id,))
+            
+            row = cursor.fetchone()
+            if row:
+                columns = [description[0] for description in cursor.description]
+                broadcast = dict(zip(columns, row))
+            
+            conn.close()
+        except Exception as e:
+            flash(f"Database error: {e}", 'error')
+    
+    # If not found in database or file-based, try to load from file
+    if not broadcast:
+        from pathlib import Path
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        output_dir = Path(project_root) / 'output'
+        
+        # Extract filename from file-based broadcast_id
+        if broadcast_id.startswith('file_'):
+            filename = broadcast_id[5:]  # Remove 'file_' prefix
+        else:
+            filename = broadcast_id
+        
+        # Try both .md extensions
+        md_file = output_dir / f"{filename}.md"
+        if not md_file.exists():
+            # Try finding any matching file
+            md_files = list(output_dir.glob('*.md'))
+            for f in md_files:
+                if filename in f.stem:
+                    md_file = f
+                    break
+        
+        if md_file.exists():
+            try:
+                with open(md_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                mp3_file = md_file.with_suffix('.mp3')
+                
+                # Extract metadata from content
+                article_count = 'N/A'
+                model_used = 'Unknown'
+                for line in content.split('\n')[:15]:
+                    if 'Articles Processed:' in line:
+                        article_count = line.split(':')[1].strip()
+                    elif 'LLM Provider:' in line:
+                        model_used = line.split(':')[1].strip()
+                
+                broadcast = {
+                    'id': broadcast_id,
+                    'broadcast_text': content,
+                    'model_used': model_used,
+                    'article_count': article_count,
+                    'created_at': datetime.fromtimestamp(md_file.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S'),
+                    'file_path': str(md_file),
+                    'audio_path': str(mp3_file) if mp3_file.exists() else None
+                }
+            except Exception as e:
+                flash(f"Error reading broadcast file: {e}", 'error')
+                return redirect(url_for('history'))
+    
+    if not broadcast:
+        flash('Broadcast not found', 'error')
+        return redirect(url_for('history'))
+    
+    return render_template('broadcast_view.html', broadcast=broadcast)
+
+@app.route('/share/broadcast/<broadcast_id>')
+def share_broadcast(broadcast_id):
+    """Generate a shareable link for a broadcast"""
+    # For now, just redirect to the broadcast view
+    # In the future, this could generate a public sharing link
+    return redirect(url_for('view_broadcast', broadcast_id=broadcast_id))
+
 @app.route('/lounge')
 def lounge():
     """Lounge area for viewing and playing generated content"""
-    # Get recent digest files
-    output_dir = Path('output')
+    # Get recent digest files with correct path
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    output_dir = Path(project_root) / 'output'
     digest_files = []
+    seen_files = set()  # Track files we've already processed to avoid duplicates
     
     if output_dir.exists():
         # Get all markdown files (digests) and their corresponding audio files
-        for md_file in sorted(output_dir.glob('digest_*.md'), key=lambda x: x.stat().st_mtime, reverse=True):
+        # Support both old format (digest_*.md) and new profile format (Profile_*.md)
+        md_files = list(output_dir.glob('digest_*.md')) + list(output_dir.glob('*_20*.md'))
+        
+        # Remove duplicates that might occur from glob patterns
+        unique_md_files = []
+        for md_file in md_files:
+            if md_file.name not in seen_files:
+                seen_files.add(md_file.name)
+                unique_md_files.append(md_file)
+        
+        for md_file in sorted(unique_md_files, key=lambda x: x.stat().st_mtime, reverse=True):
             mp3_file = md_file.with_suffix('.mp3')
             
             # Read the content
@@ -735,11 +936,21 @@ def api_download_file(file_type, filename):
     """Download generated files"""
     try:
         if file_type in ['digest', 'audio']:
-            file_path = os.path.join('output', filename)
+            # Secure the filename to prevent directory traversal
+            safe_filename = secure_filename(filename)
+            
+            # Use absolute path relative to project root
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            file_path = os.path.join(project_root, 'output', safe_filename)
+            
             if os.path.exists(file_path):
                 return send_file(file_path, as_attachment=True)
-        return jsonify({'error': 'File not found'}), 404
+            else:
+                print(f"File not found: {file_path}")
+                return jsonify({'error': f'File not found: {safe_filename}'}), 404
+        return jsonify({'error': 'Invalid file type'}), 404
     except Exception as e:
+        print(f"Download error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/analytics')
@@ -787,14 +998,20 @@ def api_analytics():
         
         conn.close()
         
-        # Count actual broadcast files (mp3s) in output folder
+        # Count actual broadcast files (mp3s) in output folder with deduplication
         broadcast_count = 0
         try:
             from pathlib import Path
-            output_dir = Path('output')
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            output_dir = Path(project_root) / 'output'
             if output_dir.exists():
-                mp3_files = list(output_dir.glob('digest_*.mp3'))
-                broadcast_count = len(mp3_files)
+                # Count both old format and new profile format audio files
+                mp3_files = list(output_dir.glob('digest_*.mp3')) + list(output_dir.glob('*_20*.mp3'))
+                # Remove duplicates by using a set of file names
+                unique_mp3_files = set()
+                for mp3_file in mp3_files:
+                    unique_mp3_files.add(mp3_file.name)
+                broadcast_count = len(unique_mp3_files)
         except Exception as e:
             print(f"Error counting broadcast files: {e}")
 
@@ -1431,16 +1648,258 @@ def api_job_status():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/api/run_jobs_now', methods=['POST'])
+def api_run_jobs_now():
+    """Run overdue jobs using the simple job executor"""
+    try:
+        import threading
+        
+        def run_jobs_in_background():
+            """Run overdue jobs in background thread"""
+            try:
+                from functions.simple_job_executor import execute_overdue_jobs
+                executed_count = execute_overdue_jobs()
+                print(f"Background job execution completed: {executed_count} jobs executed")
+            except Exception as e:
+                print(f"Error executing jobs: {e}")
+                import traceback
+                traceback.print_exc()
+        
+        # Run in background thread
+        thread = threading.Thread(target=run_jobs_in_background, daemon=True)
+        thread.start()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Job execution started. Check console for progress.'
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+# Remote Digest API endpoints
+@app.route('/api/remote_digest_settings', methods=['GET'])
+def api_get_remote_digest_settings():
+    """Get current remote digest API settings"""
+    try:
+        return jsonify({
+            'success': True,
+            'settings': {
+                'enabled': remote_api.api_enabled,
+                'has_api_key': bool(remote_api.api_key),
+                'max_per_request': remote_api.max_digests_per_request,
+                'rate_limit': remote_api.rate_limit_per_hour
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/remote_digest_settings', methods=['POST'])
+def api_save_remote_digest_settings():
+    """Save remote digest API settings"""
+    try:
+        data = request.get_json()
+        
+        enabled = data.get('enabled', False)
+        generate_new_key = data.get('generate_new_key', False)
+        max_per_request = data.get('max_per_request', 10)
+        rate_limit = data.get('rate_limit', 100)
+        
+        # Generate new API key if requested
+        api_key = None
+        if generate_new_key or (enabled and not remote_api.api_key):
+            api_key = remote_api.generate_api_key()
+        
+        # Save settings
+        remote_api.save_config(
+            enabled=enabled,
+            api_key=api_key,
+            max_per_request=max_per_request,
+            rate_limit=rate_limit
+        )
+        
+        response = {
+            'success': True,
+            'message': 'Remote Digest API settings saved',
+            'settings': {
+                'enabled': remote_api.api_enabled,
+                'has_api_key': bool(remote_api.api_key),
+                'max_per_request': remote_api.max_digests_per_request,
+                'rate_limit': remote_api.rate_limit_per_hour
+            }
+        }
+        
+        if api_key:
+            response['new_api_key'] = api_key
+        
+        return jsonify(response)
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+# Public Remote Digest API endpoints (require API key)
+@app.route('/api/remote/auth', methods=['POST'])
+@require_api_key
+def api_remote_auth():
+    """Authenticate and get server info"""
+    try:
+        stats = remote_api.get_server_stats()
+        return jsonify({
+            'authenticated': True,
+            'server_info': {
+                'name': 'News02 Digest Server',
+                'version': '1.0',
+                'total_digests': stats['total_text_digests']
+            }
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/remote/stats', methods=['GET'])
+@require_api_key
+def api_remote_stats():
+    """Get server statistics"""
+    try:
+        stats = remote_api.get_server_stats()
+        return jsonify(stats)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/remote/digests', methods=['GET'])
+@require_api_key
+def api_remote_digests():
+    """Get list of available digests, optionally filtered by profile"""
+    try:
+        limit = request.args.get('limit', type=int)
+        order = request.args.get('order', 'newest')
+        profile = request.args.get('profile')  # New profile filter parameter
+        
+        if order not in ['newest', 'oldest']:
+            order = 'newest'
+        
+        digests = remote_api.get_available_digests(limit=limit, order=order, profile_filter=profile)
+        
+        return jsonify({
+            'digests': digests,
+            'total_available': len(remote_api.get_available_digests(profile_filter=profile)),
+            'profile_filter': profile
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/remote/profiles', methods=['GET'])
+@require_api_key
+def api_remote_profiles():
+    """Get list of available RSS profiles"""
+    try:
+        profiles = remote_api.get_available_profiles()
+        profile_stats = remote_api.get_profile_stats()
+        
+        return jsonify({
+            'profiles': profiles,
+            'stats': profile_stats,
+            'total_profiles': len(profiles)
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/remote/profiles/<profile_name>/digests', methods=['GET'])
+@require_api_key
+def api_remote_profile_digests(profile_name):
+    """Get digests for a specific profile"""
+    try:
+        limit = request.args.get('limit', type=int)
+        order = request.args.get('order', 'newest')
+        
+        if order not in ['newest', 'oldest']:
+            order = 'newest'
+        
+        digests = remote_api.get_available_digests(limit=limit, order=order, profile_filter=profile_name)
+        
+        return jsonify({
+            'profile': profile_name,
+            'digests': digests,
+            'total_available': len(remote_api.get_available_digests(profile_filter=profile_name))
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/remote/digest/<digest_id>/text', methods=['GET'])
+@require_api_key
+def api_remote_digest_text(digest_id):
+    """Get digest text content"""
+    try:
+        content = remote_api.get_digest_content(digest_id, 'text')
+        if content is None:
+            return jsonify({'error': 'Digest not found'}), 404
+        
+        return jsonify({
+            'digest_id': digest_id,
+            'text': content
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/remote/digest/<digest_id>/audio', methods=['GET'])
+@require_api_key
+def api_remote_digest_audio(digest_id):
+    """Download digest audio file"""
+    try:
+        audio_path = remote_api.get_digest_content(digest_id, 'audio')
+        if audio_path is None:
+            return jsonify({'error': 'Audio file not found'}), 404
+        
+        return send_file(audio_path, as_attachment=True)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+def start_background_job_checker():
+    """Start background thread to check for overdue jobs every 5 minutes"""
+    import threading
+    import time
+    
+    def job_checker_loop():
+        while True:
+            try:
+                time.sleep(300)  # 5 minutes = 300 seconds
+                print("🔍 Checking for overdue jobs...")
+                from functions.simple_job_executor import execute_overdue_jobs
+                executed_count = execute_overdue_jobs()
+                if executed_count > 0:
+                    print(f"✅ Executed {executed_count} overdue jobs")
+            except Exception as e:
+                print(f"❌ Error in background job checker: {e}")
+    
+    # Start background thread
+    checker_thread = threading.Thread(target=job_checker_loop, daemon=True)
+    checker_thread.start()
+    print("⏰ Background job checker started (5-minute intervals)")
+
 if __name__ == '__main__':
     # Ensure output directory exists
-    os.makedirs('output', exist_ok=True)
+    output_path = os.path.join(get_project_root(), 'output')
+    os.makedirs(output_path, exist_ok=True)
     
-    # Start the job scheduler
-    job_scheduler.start_scheduler()
+    # Only start background services in the reloader child process (not the main process)
+    # This prevents duplicate services when Flask debug mode creates 2 processes
+    if os.getenv('WERKZEUG_RUN_MAIN') == 'true':
+        # This is the reloader child process - start services here
+        job_scheduler.start_scheduler()
+        print("🚀 Job scheduler started in reloader process")
+        
+        start_background_job_checker()
+    else:
+        print("🔄 Main process detected - services will start in reloader process")
     
-    # Run the Flask app
+    # Run the Flask app (localhost only for web interface)
     try:
-        app.run(host='0.0.0.0', port=5000, debug=True)
+        print("🖥️  Web Interface starting on localhost:5000")
+        print("📱 Dashboard: http://localhost:5000")
+        print("🔒 Web interface restricted to localhost only")
+        print("💡 For API access, run: python api_server.py")
+        app.run(host='127.0.0.1', port=5000, debug=True)
     finally:
         # Stop the scheduler when the app shuts down
-        job_scheduler.stop_scheduler()
+        if job_scheduler.running:
+            job_scheduler.stop_scheduler()
+            print("🛑 Job scheduler stopped")
