@@ -18,7 +18,7 @@ Get your News02 system running in minutes with these simple steps:
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/ETomberg391/News02 # Replace with actual repo URL
+    git clone https://github.com/ETomberg391/News02 
     cd News02
     ```
 2.  **Run the quick setup script:**
