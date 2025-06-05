@@ -1,0 +1,24 @@
+# Core News Processing
+pyyaml
+edge-tts
+lxml_html_clean
+lxml
+tqdm
+
+# Multi-Provider LLM Support
+python-dotenv
+openai
+requests
+google-generativeai
+ollama
+
+# Web Interface
+flask
+werkzeug
+jinja2
+feedparser
+newspaper4k
+
+# Optional: AI/ML (install separately if needed)
+# torch>=2.0.0
+# transformers>=4.30.0

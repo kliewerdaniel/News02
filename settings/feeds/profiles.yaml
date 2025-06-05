@@ -1,0 +1,31 @@
+Tech Feed:
+  created_at: '2025-06-04T19:08:31.673529'
+  description: Tech Stuff in English
+  feed_count: 11
+  feeds:
+  - https://techcrunch.com/feed/
+  - https://feeds.arstechnica.com/arstechnica/index
+  - https://www.wired.com/feed/rss
+  - https://feeds.marketwatch.com/marketwatch/topstories/
+  - http://feeds.ign.com/ign/all
+  - http://syndication.thedailywtf.com/TheDailyWtf
+  - https://www.howtogeek.com/feed/
+  - http://feeds.feedburner.com/techgenyz
+  - https://newsnblogs.com/feed/
+  - https://toucharcade.com/community/forums/-/index.rss
+  - http://feeds.feedburner.com/AndroidPolice
+Tech Special:
+  created_at: '2025-06-05T09:53:42.379029'
+  description: ''
+  feed_count: 10
+  feeds:
+  - https://techcrunch.com/feed/
+  - https://feeds.arstechnica.com/arstechnica/index
+  - https://www.wired.com/feed/rss
+  - http://feeds.ign.com/ign/all
+  - http://syndication.thedailywtf.com/TheDailyWtf
+  - https://www.howtogeek.com/feed/
+  - http://feeds.feedburner.com/techgenyz
+  - https://newsnblogs.com/feed/
+  - https://toucharcade.com/community/forums/-/index.rss
+  - http://feeds.feedburner.com/AndroidPolice

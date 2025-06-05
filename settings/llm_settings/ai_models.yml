@@ -1,0 +1,59 @@
+# Model configurations for the News Digest Generator
+# Define different models and their parameters for various LLM providers
+
+# Default local model configuration (Ollama)
+default_model:
+  api_endpoint: "http://localhost:11434"
+  api_key: ""
+  model: "mistral:latest"
+  temperature: 0.7
+  max_tokens: 4096
+
+# High-quality model for broadcast generation
+broadcast_model:
+  api_endpoint: "http://localhost:11434"
+  api_key: ""
+  model: "mistral-small:24b-instruct-2501-q8_0"
+  temperature: 0.6
+  max_tokens: 8192
+
+# OpenAI Compatible API Configuration
+openai_compatible:
+  api_endpoint: "http://localhost:8000/v1"
+  api_key: "sk-local-api-key"
+  model: "meta-llama/Llama-3.1-8B-Instruct"
+  temperature: 0.7
+  max_tokens: 4096
+
+# Configuration for Gemini 2.0 Flash
+gemini_flash:
+  api_endpoint: "https://generativelanguage.googleapis.com/v1beta/openai/"
+  api_key: ""
+  model: "gemini-2.5-flash-preview-05-20"
+  temperature: 0.7
+  max_tokens: 65536
+  top_p: 0.95
+
+# Configuration for Gemini Pro
+gemini_pro:
+  api_endpoint: "https://generativelanguage.googleapis.com/v1beta/openai/"
+  api_key: ""
+  model: "gemini-1.5-pro"
+  temperature: 0.7
+  max_tokens: 32768
+
+# Configuration for Claude via OpenAI-compatible endpoint
+claude_compatible:
+  api_endpoint: "https://api.anthropic.com/v1"
+  api_key: ""
+  model: "claude-3-sonnet-20240229"
+  temperature: 0.7
+  max_tokens: 4096
+
+# Fast summarization model
+fast_summary:
+  api_endpoint: "http://localhost:11434"
+  api_key: ""
+  model: "llama3.2:3b"
+  temperature: 0.5
+  max_tokens: 2048
