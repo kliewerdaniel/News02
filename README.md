@@ -1,3 +1,6 @@
+Update Notes 6/5/2025:
+- Working on fixing jobs, and adding an api service. Eventually this should lead to being able to propt this behind a secure proxy server, and run api requests to collect the broadcasts to then add to other external services. I have a discord bot project that could use this on top of its design to already update selected discord servers with youtube channel updates, subreddit updates, newsapi updates, and then hopefully add this news digest as a bi-daily updater as well for news on specific RSS Profiles set for Political news, Tech, and Financial updates.
+
 <img src="https://github.com/user-attachments/assets/d38d03a3-6a7d-4617-b09c-103421e89cf9" width="49%"> <img src="https://github.com/user-attachments/assets/13e20837-117a-4a53-b8b5-0ca511b42009" width="49%">
 
 ![Screenshot_20250604_154206](https://github.com/user-attachments/assets/5b824481-329d-40fa-815b-ee3855994a4b)
