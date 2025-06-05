@@ -15,7 +15,7 @@ import ollama
 from tqdm import tqdm  # Progress bar
 
 # Load feed URLs from YAML configuration
-def load_feeds(config_path='feeds.yaml'):
+def load_feeds(config_path='settings/feeds/feeds.yaml'):
     with open(config_path, 'r') as file:
         config = yaml.safe_load(file)
     return config.get('feeds', [])

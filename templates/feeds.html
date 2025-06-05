@@ -1,0 +1,1291 @@
+{% extends "base.html" %}
+
+{% block title %}RSS Feeds - News02{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-rss"></i> RSS Feed Management
+                </h5>
+                <button class="btn btn-primary btn-sm" onclick="addFeed()">
+                    <i class="bi bi-plus-circle"></i> Add Feed
+                </button>
+            </div>
+            <div class="card-body">
+                <form id="feedsForm">
+                    <div id="feedsList">
+                        {% for feed_url in feed_urls %}
+                        <div class="feed-item mb-3">
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="bi bi-rss"></i>
+                                </span>
+                                <input type="url" class="form-control" name="feeds[]" 
+                                       value="{{ feed_url }}" placeholder="https://example.com/feed.xml">
+                                <button type="button" class="btn btn-outline-danger" onclick="removeFeed(this)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-info" onclick="testFeed(this)">
+                                    <i class="bi bi-check-circle"></i>
+                                </button>
+                            </div>
+                            {% if feed_url in feed_stats %}
+                            <small class="text-muted">
+                                {{ feed_stats[feed_url].article_count }} articles • 
+                                Last: {{ feed_stats[feed_url].last_article or 'Never' }}
+                            </small>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-circle"></i> Save Feeds
+                            </button>
+                            <button type="button" class="btn btn-outline-primary ms-2" onclick="importFeeds()">
+                                <i class="bi bi-upload"></i> Import OPML
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary ms-2" onclick="exportFeeds()">
+                                <i class="bi bi-download"></i> Export OPML
+                            </button>
+                            <button type="button" class="btn btn-outline-success ms-2" data-bs-toggle="modal" data-bs-target="#profileModal">
+                                <i class="bi bi-bookmark"></i> Manage Profiles
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- RSS Profile Management -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-bookmark-star"></i> RSS Profiles
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <select class="form-select" id="profileSelect">
+                            <option value="">Select a profile to load...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-outline-primary w-100" onclick="loadSelectedProfile()">
+                            <i class="bi bi-download"></i> Load Profile
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <small class="text-muted">Save your current feeds as a profile or load a saved configuration</small>
+                </div>
+                <div id="profileStatus" style="display: none;" class="mt-2">
+                    <div class="alert alert-info mb-0">
+                        <small id="profileStatusText"></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feed Discovery Interface -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-search"></i> Discover RSS Feeds
+                </h5>
+                <small class="text-muted">Explore curated feeds from awesome-rss-feeds collection</small>
+            </div>
+            <div class="card-body">
+                <!-- Search Interface -->
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="text" class="form-control" id="feedSearchInput"
+                                   placeholder="Search feeds by name, topic, or description...">
+                            <button class="btn btn-outline-primary" onclick="searchFeeds()">Search</button>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <select class="form-select" id="categoryFilter" onchange="loadFeedsByCategory()">
+                            <option value="">All Categories</option>
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Quick Category Buttons -->
+                <div class="mb-3">
+                    <button class="btn btn-outline-secondary btn-sm me-2 mb-1" onclick="loadPopularFeeds()">
+                        <i class="bi bi-star"></i> Popular
+                    </button>
+                    <button class="btn btn-primary btn-sm me-2 mb-1" onclick="loadEnglishFeeds()">
+                        <i class="bi bi-translate"></i> English Only
+                    </button>
+                    <button class="btn btn-outline-info btn-sm me-2 mb-1" onclick="loadRecommendedCategory('News')">
+                        <i class="bi bi-newspaper"></i> News
+                    </button>
+                    <button class="btn btn-outline-success btn-sm me-2 mb-1" onclick="loadRecommendedCategory('Tech')">
+                        <i class="bi bi-cpu"></i> Technology
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm me-2 mb-1" onclick="loadRecommendedCategory('Programming')">
+                        <i class="bi bi-code"></i> Programming
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm me-2 mb-1" onclick="loadCountryCategory('Canada')">
+                        <i class="bi bi-flag"></i> Canada
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm me-2 mb-1" onclick="loadCountryCategory('United Kingdom')">
+                        <i class="bi bi-flag"></i> UK
+                    </button>
+                </div>
+
+                <!-- Feed Discovery Stats -->
+                <div class="row mb-3" id="discoveryStats" style="display: none;">
+                    <div class="col-12">
+                        <div class="alert alert-info py-2">
+                            <small>
+                                <i class="bi bi-info-circle"></i>
+                                <span id="statsText">Loading feed database...</span>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search Results -->
+                <div id="feedDiscoveryResults">
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-search fs-1"></i>
+                        <p class="mt-2">Search for feeds or browse categories above</p>
+                    </div>
+                </div>
+
+                <!-- Pagination Controls -->
+                <div id="feedPagination" style="display: none;">
+                    <nav aria-label="Feed pagination">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item" id="paginationPrev">
+                                <a class="page-link" href="#" onclick="changePage('prev')">
+                                    <i class="bi bi-chevron-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="page-item active" id="currentPageItem">
+                                <span class="page-link" id="currentPageSpan">1</span>
+                            </li>
+                            <li class="page-item" id="paginationNext">
+                                <a class="page-link" href="#" onclick="changePage('next')">
+                                    Next <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                    <div class="text-center text-muted">
+                        <small id="paginationInfo">Page 1 of 1 (0 feeds)</small>
+                    </div>
+                </div>
+
+                <!-- Loading Indicator -->
+                <div id="feedDiscoveryLoading" style="display: none;">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Loading feeds...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feed Statistics -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-bar-chart"></i> Feed Statistics
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if feed_stats %}
+                    <div class="list-group list-group-flush">
+                        {% for feed_url, stats in feed_stats.items() %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ feed_url.split('/')[-1][:30] }}...</h6>
+                                <span class="badge bg-primary">{{ stats.article_count }}</span>
+                            </div>
+                            <p class="mb-1">
+                                <small>Last article: {{ stats.last_article or 'Never' }}</small>
+                            </p>
+                            <small class="text-muted">Active {{ stats.active_days }} days</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No feed statistics available. Enable database to track feed performance.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Feed Validation -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-shield-check"></i> Feed Validator
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="input-group mb-3">
+                    <input type="url" class="form-control" id="validateFeedUrl" 
+                           placeholder="https://example.com/feed.xml">
+                    <button class="btn btn-outline-primary" onclick="validateSingleFeed()">
+                        <i class="bi bi-check-circle"></i> Validate
+                    </button>
+                </div>
+                <div id="validationResult"></div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-lightning"></i> Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-outline-success w-100 mb-2" onclick="testAllFeeds()">
+                    <i class="bi bi-check-all"></i> Test All Feeds
+                </button>
+                <button class="btn btn-outline-warning w-100 mb-2" onclick="removeInvalidFeeds()">
+                    <i class="bi bi-trash"></i> Remove Invalid
+                </button>
+                <button class="btn btn-outline-info w-100" onclick="sortFeeds()">
+                    <i class="bi bi-sort-alpha-down"></i> Sort Alphabetically
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- RSS Profile Management Modal -->
+<div class="modal fade" id="profileModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-bookmark-star"></i> Manage RSS Profiles
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Create New Profile -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">
+                            <i class="bi bi-plus-circle"></i> Save Current Feeds as Profile
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Profile Name</label>
+                            <input type="text" class="form-control" id="newProfileName"
+                                   placeholder="e.g., Tech News, World Events, Finance">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description (Optional)</label>
+                            <textarea class="form-control" id="newProfileDescription" rows="2"
+                                      placeholder="Brief description of this feed collection"></textarea>
+                        </div>
+                        <button class="btn btn-primary" onclick="saveCurrentAsProfile()">
+                            <i class="bi bi-save"></i> Save Profile
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Existing Profiles -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">
+                            <i class="bi bi-list"></i> Existing Profiles
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="profilesList">
+                            <div class="text-center text-muted py-3">
+                                <i class="bi bi-inbox fs-3"></i>
+                                <p class="mt-2">No profiles saved yet</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Import OPML Modal -->
+<div class="modal fade" id="importModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Import OPML File</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="file" class="form-control" id="opmlFile" accept=".opml,.xml">
+                <div class="form-text">Select an OPML file to import RSS feeds</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="processImport()">Import</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('feedsForm').addEventListener('submit', saveFeeds);
+    initializeFeedDiscovery();
+    loadProfiles(); // Load RSS profiles on page load
+    
+    // Add enter key support for search
+    document.getElementById('feedSearchInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            searchFeeds();
+        }
+    });
+});
+
+// Feed Discovery Functions
+let currentPagination = {
+    page: 1,
+    per_page: 30,
+    total_pages: 1,
+    total_feeds: 0,
+    current_action: null,
+    current_params: {}
+};
+
+function initializeFeedDiscovery() {
+    loadCategories();
+    loadDiscoveryStats();
+}
+
+function loadCategories() {
+    fetch('/api/feed_discovery/categories')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const select = document.getElementById('categoryFilter');
+                select.innerHTML = '<option value="">All Categories</option>';
+                
+                data.categories.forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat.key;
+                    option.textContent = `${cat.display_name} (${cat.feed_count})`;
+                    select.appendChild(option);
+                });
+            }
+        })
+        .catch(error => console.error('Error loading categories:', error));
+}
+
+function loadDiscoveryStats() {
+    fetch('/api/feed_discovery/categories')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.stats) {
+                const statsDiv = document.getElementById('discoveryStats');
+                const statsText = document.getElementById('statsText');
+                
+                statsText.textContent = `${data.stats.total_feeds} feeds available across ${data.stats.total_categories} categories`;
+                statsDiv.style.display = 'block';
+            }
+        })
+        .catch(error => console.error('Error loading stats:', error));
+}
+
+function searchFeeds(page = 1) {
+    const query = document.getElementById('feedSearchInput').value.trim();
+    const category = document.getElementById('categoryFilter').value;
+    
+    if (!query && !category) {
+        showFeedDiscoveryMessage('Please enter a search term or select a category', 'warning');
+        return;
+    }
+    
+    showLoading(true);
+    
+    currentPagination.current_action = 'search';
+    currentPagination.current_params = { query, category };
+    currentPagination.page = page;
+    
+    const params = new URLSearchParams();
+    params.append('page', page);
+    params.append('per_page', currentPagination.per_page);
+    if (query) params.append('q', query);
+    if (category) params.append('category', category);
+    
+    fetch(`/api/feed_discovery/search?${params}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                let title = `Search results`;
+                if (query && category) {
+                    title += ` for "${query}" in ${category}`;
+                } else if (query) {
+                    title += ` for "${query}"`;
+                } else {
+                    title += ` in ${category}`;
+                }
+                displayFeedResults(data.feeds, title);
+                updatePagination(data.pagination);
+            } else {
+                showFeedDiscoveryMessage('Error searching feeds: ' + data.error, 'danger');
+            }
+        })
+        .catch(error => {
+            showFeedDiscoveryMessage('Error searching feeds: ' + error.message, 'danger');
+        })
+        .finally(() => showLoading(false));
+}
+
+function loadFeedsByCategory() {
+    const category = document.getElementById('categoryFilter').value;
+    if (!category) {
+        clearFeedResults();
+        return;
+    }
+    
+    loadCategoryFeeds(category);
+}
+
+function loadCategoryFeeds(categoryKey) {
+    showLoading(true);
+    
+    fetch(`/api/feed_discovery/feeds/${categoryKey}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayFeedResults(data.feeds, `${data.count} feeds in this category`);
+                
+                // Update the category filter to match
+                const select = document.getElementById('categoryFilter');
+                select.value = categoryKey;
+            } else {
+                showFeedDiscoveryMessage('Error loading category feeds: ' + data.error, 'danger');
+            }
+        })
+        .catch(error => {
+            showFeedDiscoveryMessage('Error loading category feeds: ' + error.message, 'danger');
+        })
+        .finally(() => showLoading(false));
+}
+
+function loadPopularFeeds() {
+    showLoading(true);
+    
+    fetch('/api/feed_discovery/popular?limit=20')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayFeedResults(data.feeds, `${data.count} popular feeds`);
+            } else {
+                showFeedDiscoveryMessage('Error loading popular feeds: ' + data.error, 'danger');
+            }
+        })
+        .catch(error => {
+            showFeedDiscoveryMessage('Error loading popular feeds: ' + error.message, 'danger');
+        })
+        .finally(() => showLoading(false));
+}
+
+function loadEnglishFeeds(page = 1) {
+    showLoading(true);
+    
+    currentPagination.current_action = 'english';
+    currentPagination.current_params = {};
+    currentPagination.page = page;
+    
+    fetch(`/api/feed_discovery/english?page=${page}&per_page=${currentPagination.per_page}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayFeedResults(data.feeds, `English-language feeds`);
+                updatePagination(data.pagination);
+                
+                // Update category filter with English-only options
+                updateCategoryFilterForEnglish(data.categories);
+            } else {
+                showFeedDiscoveryMessage('Error loading English feeds: ' + data.error, 'danger');
+            }
+        })
+        .catch(error => {
+            showFeedDiscoveryMessage('Error loading English feeds: ' + error.message, 'danger');
+        })
+        .finally(() => showLoading(false));
+}
+
+function loadRecommendedCategory(categoryName) {
+    // Find the recommended category that matches
+    const categoryKey = `recommended_${categoryName}`;
+    loadCategoryFeeds(categoryKey);
+}
+
+function loadCountryCategory(countryName) {
+    // Find the country category that matches
+    const categoryKey = `country_${countryName}`;
+    loadCategoryFeeds(categoryKey);
+}
+
+function updateCategoryFilterForEnglish(englishCategories) {
+    const select = document.getElementById('categoryFilter');
+    select.innerHTML = '<option value="">All English Categories</option>';
+    
+    englishCategories.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat.key;
+        option.textContent = `${cat.display_name} (${cat.feed_count})`;
+        select.appendChild(option);
+    });
+}
+
+// Pagination Functions
+function updatePagination(pagination) {
+    currentPagination = { ...currentPagination, ...pagination };
+    
+    const paginationDiv = document.getElementById('feedPagination');
+    const prevBtn = document.getElementById('paginationPrev');
+    const nextBtn = document.getElementById('paginationNext');
+    const currentPageSpan = document.getElementById('currentPageSpan');
+    const paginationInfo = document.getElementById('paginationInfo');
+    
+    // Update current page display
+    currentPageSpan.textContent = pagination.page;
+    
+    // Update pagination info
+    paginationInfo.textContent = `Page ${pagination.page} of ${pagination.total_pages} (${pagination.total_feeds} feeds)`;
+    
+    // Show/hide previous button
+    if (pagination.has_prev) {
+        prevBtn.classList.remove('disabled');
+    } else {
+        prevBtn.classList.add('disabled');
+    }
+    
+    // Show/hide next button
+    if (pagination.has_next) {
+        nextBtn.classList.remove('disabled');
+    } else {
+        nextBtn.classList.add('disabled');
+    }
+    
+    // Show pagination if needed
+    if (pagination.total_pages > 1) {
+        paginationDiv.style.display = 'block';
+    } else {
+        paginationDiv.style.display = 'none';
+    }
+}
+
+function changePage(direction) {
+    let newPage = currentPagination.page;
+    
+    if (direction === 'prev' && currentPagination.has_prev) {
+        newPage = currentPagination.page - 1;
+    } else if (direction === 'next' && currentPagination.has_next) {
+        newPage = currentPagination.page + 1;
+    } else {
+        return; // Invalid direction or no more pages
+    }
+    
+    // Call the appropriate function based on current action
+    switch (currentPagination.current_action) {
+        case 'english':
+            loadEnglishFeeds(newPage);
+            break;
+        case 'search':
+            // Restore search parameters
+            document.getElementById('feedSearchInput').value = currentPagination.current_params.query || '';
+            document.getElementById('categoryFilter').value = currentPagination.current_params.category || '';
+            searchFeeds(newPage);
+            break;
+        case 'popular':
+            loadPopularFeeds(newPage);
+            break;
+        default:
+            console.warn('Unknown pagination action:', currentPagination.current_action);
+    }
+}
+
+function displayFeedResults(feeds, headerText) {
+    const resultsDiv = document.getElementById('feedDiscoveryResults');
+    
+    if (feeds.length === 0) {
+        resultsDiv.innerHTML = `
+            <div class="text-center text-muted py-4">
+                <i class="bi bi-exclamation-circle fs-1"></i>
+                <p class="mt-2">No feeds found matching your criteria</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = `<div class="mb-2"><small class="text-muted">${headerText}</small></div>`;
+    
+    feeds.forEach(feed => {
+        const description = feed.description ? `<br><small class="text-muted">${feed.description}</small>` : '';
+        const category = feed.category_display ? `<span class="badge bg-secondary me-2">${feed.category_display}</span>` : '';
+        
+        html += `
+            <div class="list-group-item d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <div class="d-flex align-items-center mb-1">
+                        ${category}
+                        <strong>${feed.title || feed.text}</strong>
+                    </div>
+                    <div class="feed-url">
+                        <small class="text-muted font-monospace">${feed.url}</small>
+                    </div>
+                    ${description}
+                </div>
+                <div class="d-flex gap-1">
+                    <button class="btn btn-sm btn-outline-info" onclick="testDiscoveredFeed('${feed.url}', this)">
+                        <i class="bi bi-check-circle"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="addDiscoveredFeed('${feed.url}')">
+                        <i class="bi bi-plus-circle"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    
+    resultsDiv.innerHTML = `<div class="list-group">${html}</div>`;
+}
+
+function addDiscoveredFeed(feedUrl) {
+    // Check if feed already exists
+    const existingInputs = document.querySelectorAll('input[name="feeds[]"]');
+    for (let input of existingInputs) {
+        if (input.value === feedUrl) {
+            showAlert('Feed already exists in the list', 'warning');
+            return;
+        }
+    }
+    
+    addFeed();
+    const inputs = document.querySelectorAll('input[name="feeds[]"]');
+    inputs[inputs.length - 1].value = feedUrl;
+    
+    showAlert('Feed added to your list', 'success');
+    
+    // Scroll to the feeds section
+    document.getElementById('feedsList').scrollIntoView({ behavior: 'smooth' });
+}
+
+function testDiscoveredFeed(feedUrl, button) {
+    const originalIcon = button.innerHTML;
+    button.innerHTML = '<i class="bi bi-arrow-repeat spinning"></i>';
+    button.disabled = true;
+    
+    fetch('/api/test_feed', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({url: feedUrl})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            button.innerHTML = '<i class="bi bi-check-circle text-success"></i>';
+            showAlert(`Feed is valid! Found ${data.articles || 0} articles.`, 'success');
+        } else {
+            button.innerHTML = '<i class="bi bi-exclamation-circle text-danger"></i>';
+            showAlert('Feed validation failed: ' + (data.error || 'Unknown error'), 'danger');
+        }
+        
+        setTimeout(() => {
+            button.innerHTML = originalIcon;
+            button.disabled = false;
+        }, 3000);
+    })
+    .catch(error => {
+        button.innerHTML = '<i class="bi bi-exclamation-circle text-danger"></i>';
+        showAlert('Error testing feed: ' + error.message, 'danger');
+        
+        setTimeout(() => {
+            button.innerHTML = originalIcon;
+            button.disabled = false;
+        }, 3000);
+    });
+}
+
+function clearFeedResults() {
+    const resultsDiv = document.getElementById('feedDiscoveryResults');
+    resultsDiv.innerHTML = `
+        <div class="text-center text-muted py-4">
+            <i class="bi bi-search fs-1"></i>
+            <p class="mt-2">Search for feeds or browse categories above</p>
+        </div>
+    `;
+}
+
+function showLoading(show) {
+    const loadingDiv = document.getElementById('feedDiscoveryLoading');
+    const resultsDiv = document.getElementById('feedDiscoveryResults');
+    
+    if (show) {
+        loadingDiv.style.display = 'block';
+        resultsDiv.style.display = 'none';
+    } else {
+        loadingDiv.style.display = 'none';
+        resultsDiv.style.display = 'block';
+    }
+}
+
+function showFeedDiscoveryMessage(message, type) {
+    const resultsDiv = document.getElementById('feedDiscoveryResults');
+    const iconMap = {
+        'success': 'check-circle',
+        'warning': 'exclamation-triangle',
+        'danger': 'exclamation-circle',
+        'info': 'info-circle'
+    };
+    
+    resultsDiv.innerHTML = `
+        <div class="alert alert-${type} text-center">
+            <i class="bi bi-${iconMap[type] || 'info-circle'} fs-3"></i>
+            <p class="mt-2 mb-0">${message}</p>
+        </div>
+    `;
+}
+
+function addFeed() {
+    const feedsList = document.getElementById('feedsList');
+    const feedItem = document.createElement('div');
+    feedItem.className = 'feed-item mb-3';
+    feedItem.innerHTML = `
+        <div class="input-group">
+            <span class="input-group-text">
+                <i class="bi bi-rss"></i>
+            </span>
+            <input type="url" class="form-control" name="feeds[]" 
+                   value="" placeholder="https://example.com/feed.xml">
+            <button type="button" class="btn btn-outline-danger" onclick="removeFeed(this)">
+                <i class="bi bi-trash"></i>
+            </button>
+            <button type="button" class="btn btn-outline-info" onclick="testFeed(this)">
+                <i class="bi bi-check-circle"></i>
+            </button>
+        </div>
+    `;
+    feedsList.appendChild(feedItem);
+}
+
+function removeFeed(button) {
+    button.closest('.feed-item').remove();
+}
+
+function addPopularFeed(feedUrl) {
+    // Check if feed already exists
+    const existingInputs = document.querySelectorAll('input[name="feeds[]"]');
+    for (let input of existingInputs) {
+        if (input.value === feedUrl) {
+            showAlert('Feed already exists in the list', 'warning');
+            return;
+        }
+    }
+    
+    addFeed();
+    const inputs = document.querySelectorAll('input[name="feeds[]"]');
+    inputs[inputs.length - 1].value = feedUrl;
+}
+
+function testFeed(button) {
+    const input = button.parentElement.querySelector('input');
+    const feedUrl = input.value.trim();
+    
+    if (!feedUrl) {
+        showAlert('Please enter a feed URL', 'warning');
+        return;
+    }
+    
+    const originalIcon = button.innerHTML;
+    button.innerHTML = '<i class="bi bi-arrow-repeat spinning"></i>';
+    button.disabled = true;
+    
+    // Simple validation - try to fetch the feed
+    fetch('/api/test_feed', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({url: feedUrl})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            button.innerHTML = '<i class="bi bi-check-circle text-success"></i>';
+            showAlert(`Feed is valid! Found ${data.articles || 0} articles.`, 'success');
+        } else {
+            button.innerHTML = '<i class="bi bi-exclamation-circle text-danger"></i>';
+            showAlert('Feed validation failed: ' + (data.error || 'Unknown error'), 'danger');
+        }
+        
+        setTimeout(() => {
+            button.innerHTML = originalIcon;
+            button.disabled = false;
+        }, 2000);
+    })
+    .catch(error => {
+        button.innerHTML = '<i class="bi bi-exclamation-circle text-danger"></i>';
+        showAlert('Error testing feed: ' + error.message, 'danger');
+        
+        setTimeout(() => {
+            button.innerHTML = originalIcon;
+            button.disabled = false;
+        }, 2000);
+    });
+}
+
+function saveFeeds(event) {
+    event.preventDefault();
+    
+    const inputs = document.querySelectorAll('input[name="feeds[]"]');
+    const feeds = Array.from(inputs)
+        .map(input => input.value.trim())
+        .filter(url => url && url.startsWith('http'));
+    
+    if (feeds.length === 0) {
+        showAlert('Please add at least one valid feed URL', 'warning');
+        return;
+    }
+    
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="bi bi-arrow-repeat spinning"></i> Saving...';
+    submitBtn.disabled = true;
+    
+    fetch('/api/save_feeds', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({feeds: feeds})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(data.message, 'success');
+        } else {
+            showAlert('Error saving feeds: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        showAlert('Error saving feeds: ' + error.message, 'danger');
+    })
+    .finally(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+}
+
+function testAllFeeds() {
+    const inputs = document.querySelectorAll('input[name="feeds[]"]');
+    const buttons = document.querySelectorAll('.btn-outline-info');
+    
+    inputs.forEach((input, index) => {
+        if (input.value.trim()) {
+            setTimeout(() => {
+                testFeed(buttons[index]);
+            }, index * 1000); // Stagger requests
+        }
+    });
+}
+
+function removeInvalidFeeds() {
+    if (confirm('This will remove feeds that appear to be invalid. Continue?')) {
+        const feedItems = document.querySelectorAll('.feed-item');
+        feedItems.forEach(item => {
+            const input = item.querySelector('input[name="feeds[]"]');
+            const url = input.value.trim();
+            
+            // Basic validation
+            if (!url || !url.startsWith('http') || url.length < 10) {
+                item.remove();
+            }
+        });
+        showAlert('Invalid feeds removed', 'info');
+    }
+}
+
+function sortFeeds() {
+    const feedsList = document.getElementById('feedsList');
+    const feedItems = Array.from(feedsList.querySelectorAll('.feed-item'));
+    
+    feedItems.sort((a, b) => {
+        const urlA = a.querySelector('input').value.toLowerCase();
+        const urlB = b.querySelector('input').value.toLowerCase();
+        return urlA.localeCompare(urlB);
+    });
+    
+    // Clear and re-add sorted items
+    feedsList.innerHTML = '';
+    feedItems.forEach(item => feedsList.appendChild(item));
+    
+    showAlert('Feeds sorted alphabetically', 'info');
+}
+
+function importFeeds() {
+    const modal = new bootstrap.Modal(document.getElementById('importModal'));
+    modal.show();
+}
+
+function processImport() {
+    const fileInput = document.getElementById('opmlFile');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        showAlert('Please select an OPML file', 'warning');
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(e.target.result, 'text/xml');
+            const outlines = xmlDoc.querySelectorAll('outline[xmlUrl]');
+            
+            outlines.forEach(outline => {
+                const feedUrl = outline.getAttribute('xmlUrl');
+                if (feedUrl) {
+                    addPopularFeed(feedUrl);
+                }
+            });
+            
+            showAlert(`Imported ${outlines.length} feeds from OPML`, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('importModal')).hide();
+            
+        } catch (error) {
+            showAlert('Error parsing OPML file: ' + error.message, 'danger');
+        }
+    };
+    
+    reader.readAsText(file);
+}
+
+function exportFeeds() {
+    const inputs = document.querySelectorAll('input[name="feeds[]"]');
+    const feeds = Array.from(inputs)
+        .map(input => input.value.trim())
+        .filter(url => url && url.startsWith('http'));
+    
+    if (feeds.length === 0) {
+        showAlert('No feeds to export', 'warning');
+        return;
+    }
+    
+    // Generate OPML
+    let opml = `<?xml version="1.0" encoding="UTF-8"?>
+<opml version="1.0">
+    <head>
+        <title>News02 Feeds Export</title>
+        <dateCreated>${new Date().toISOString()}</dateCreated>
+    </head>
+    <body>`;
+    
+    feeds.forEach(feed => {
+        const title = feed.split('/').slice(-1)[0].replace('.xml', '').replace('.rss', '');
+        opml += `\n        <outline text="${title}" xmlUrl="${feed}" />`;
+    });
+    
+    opml += `
+    </body>
+</opml>`;
+    
+    // Download file
+    const blob = new Blob([opml], {type: 'application/xml'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'news02_feeds.opml';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showAlert('Feeds exported successfully', 'success');
+}
+
+function validateSingleFeed() {
+    const input = document.getElementById('validateFeedUrl');
+    const feedUrl = input.value.trim();
+    const resultDiv = document.getElementById('validationResult');
+    
+    if (!feedUrl) {
+        showAlert('Please enter a feed URL', 'warning');
+        return;
+    }
+    
+    resultDiv.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Validating...';
+    
+    fetch('/api/test_feed', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({url: feedUrl})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success alert-sm">
+                    <strong>Valid Feed!</strong><br>
+                    Title: ${data.title || 'Unknown'}<br>
+                    Articles: ${data.articles || 0}<br>
+                    Last Updated: ${data.last_updated || 'Unknown'}
+                </div>
+            `;
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger alert-sm">
+                    <strong>Invalid Feed</strong><br>
+                    Error: ${data.error || 'Unknown error'}
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger alert-sm">
+                <strong>Error</strong><br>
+                ${error.message}
+            </div>
+        `;
+    });
+}
+
+// RSS Profile Management Functions
+function loadProfiles() {
+    fetch('/api/rss_profiles')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateProfilesDropdown(data.profiles);
+                updateProfilesList(data.profiles);
+            } else {
+                console.error('Error loading profiles:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading profiles:', error);
+        });
+}
+
+function updateProfilesDropdown(profiles) {
+    const select = document.getElementById('profileSelect');
+    select.innerHTML = '<option value="">Select a profile to load...</option>';
+    
+    Object.keys(profiles).forEach(profileName => {
+        const profile = profiles[profileName];
+        const option = document.createElement('option');
+        option.value = profileName;
+        option.textContent = `${profileName} (${profile.feed_count} feeds)`;
+        select.appendChild(option);
+    });
+}
+
+function updateProfilesList(profiles) {
+    const container = document.getElementById('profilesList');
+    
+    if (Object.keys(profiles).length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted py-3">
+                <i class="bi bi-inbox fs-3"></i>
+                <p class="mt-2">No profiles saved yet</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    Object.keys(profiles).forEach(profileName => {
+        const profile = profiles[profileName];
+        const createdDate = new Date(profile.created_at).toLocaleDateString();
+        
+        html += `
+            <div class="card mb-2">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h6 class="card-title mb-1">${profileName}</h6>
+                            <p class="card-text text-muted small mb-1">
+                                ${profile.description || 'No description'}
+                            </p>
+                            <small class="text-muted">
+                                ${profile.feed_count} feeds • Created ${createdDate}
+                            </small>
+                        </div>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary" onclick="loadProfile('${profileName}')">
+                                <i class="bi bi-download"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="deleteProfile('${profileName}')">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function saveCurrentAsProfile() {
+    const nameInput = document.getElementById('newProfileName');
+    const descriptionInput = document.getElementById('newProfileDescription');
+    
+    const profileName = nameInput.value.trim();
+    const description = descriptionInput.value.trim();
+    
+    if (!profileName) {
+        showAlert('Please enter a profile name', 'warning');
+        return;
+    }
+    
+    // Get current feeds
+    const inputs = document.querySelectorAll('input[name="feeds[]"]');
+    const feeds = Array.from(inputs)
+        .map(input => input.value.trim())
+        .filter(url => url && url.startsWith('http'));
+    
+    if (feeds.length === 0) {
+        showAlert('No valid feeds to save in profile', 'warning');
+        return;
+    }
+    
+    const profileData = {
+        name: profileName,
+        description: description,
+        feeds: feeds
+    };
+    
+    fetch('/api/rss_profiles', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(profileData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(data.message, 'success');
+            nameInput.value = '';
+            descriptionInput.value = '';
+            loadProfiles(); // Refresh the lists
+        } else {
+            showAlert('Error saving profile: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        showAlert('Error saving profile: ' + error.message, 'danger');
+    });
+}
+
+function loadProfile(profileName) {
+    fetch(`/api/rss_profiles/${encodeURIComponent(profileName)}/load`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(data.message, 'success');
+            
+            // Reload the page to show the new feeds
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showAlert('Error loading profile: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        showAlert('Error loading profile: ' + error.message, 'danger');
+    });
+}
+
+function loadSelectedProfile() {
+    const select = document.getElementById('profileSelect');
+    const profileName = select.value;
+    
+    if (!profileName) {
+        showAlert('Please select a profile to load', 'warning');
+        return;
+    }
+    
+    loadProfile(profileName);
+    
+    // Show status
+    const statusDiv = document.getElementById('profileStatus');
+    const statusText = document.getElementById('profileStatusText');
+    statusText.textContent = `Loading profile: ${profileName}...`;
+    statusDiv.style.display = 'block';
+    
+    setTimeout(() => {
+        statusDiv.style.display = 'none';
+    }, 3000);
+}
+
+function deleteProfile(profileName) {
+    if (!confirm(`Are you sure you want to delete the profile "${profileName}"? This action cannot be undone.`)) {
+        return;
+    }
+    
+    fetch(`/api/rss_profiles/${encodeURIComponent(profileName)}`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert(data.message, 'success');
+            loadProfiles(); // Refresh the lists
+        } else {
+            showAlert('Error deleting profile: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        showAlert('Error deleting profile: ' + error.message, 'danger');
+    });
+}
+
+// Utility function to show alerts
+function showAlert(message, type) {
+    // Create alert element
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 300px;';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}

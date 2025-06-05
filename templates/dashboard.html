@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - News02{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Status Cards -->
+    <div class="col-md-3 mb-4">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">Articles Today</h5>
+                        <h2 class="mb-0" id="articlesTodayCount">0</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="bi bi-newspaper fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">Active Feeds</h5>
+                        <h2 class="mb-0">{{ feed_analytics|length }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="bi bi-rss fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">Broadcasts</h5>
+                        <h2 class="mb-0" id="broadcastCount">{{ recent_broadcasts|length }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="bi bi-broadcast fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">Status</h5>
+                        <h3 class="mb-0">
+                            {% if generation_status.running %}
+                                <i class="bi bi-arrow-repeat"></i> Running
+                            {% else %}
+                                <i class="bi bi-check-circle"></i> Ready
+                            {% endif %}
+                        </h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="bi bi-activity fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Analytics Chart -->
+    <div class="col-md-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-bar-chart"></i> Daily Article Volume
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="dailyChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Feed Performance -->
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-pie-chart"></i> Feed Performance
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="feedChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Articles -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-clock"></i> Recent Articles
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_articles %}
+                    <div class="list-group list-group-flush">
+                        {% for article in recent_articles %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ article.title[:80] }}{% if article.title|length > 80 %}...{% endif %}</h6>
+                                <small>{{ article.fetched_at }}</small>
+                            </div>
+                            <p class="mb-1">
+                                <small class="text-muted">{{ article.source_feed.split('/')[-1] }}</small>
+                                {% if article.processed %}
+                                    <span class="badge bg-success ms-2">Processed</span>
+                                {% else %}
+                                    <span class="badge bg-warning ms-2">Pending</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No recent articles found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Broadcasts -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-broadcast"></i> Recent Broadcasts
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_broadcasts %}
+                    <div class="list-group list-group-flush">
+                        {% for broadcast in recent_broadcasts[:5] %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ broadcast.created_at }}</h6>
+                                <span class="badge bg-primary">{{ broadcast.article_count }} articles</span>
+                            </div>
+                            <p class="mb-1">
+                                <small>Model: {{ broadcast.model_used }}</small>
+                            </p>
+                            <div class="btn-group btn-group-sm" role="group">
+                                {% if broadcast.file_path %}
+                                <a href="{{ url_for('api_download_file', file_type='digest', filename=broadcast.file_path.split('/')[-1]) }}" 
+                                   class="btn btn-outline-primary">
+                                    <i class="bi bi-download"></i> Text
+                                </a>
+                                {% endif %}
+                                {% if broadcast.audio_path %}
+                                <a href="{{ url_for('api_download_file', file_type='audio', filename=broadcast.audio_path.split('/')[-1]) }}" 
+                                   class="btn btn-outline-success">
+                                    <i class="bi bi-volume-up"></i> Audio
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No broadcasts generated yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-lightning"></i> Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-2">
+                        <button class="btn btn-primary w-100" onclick="startGeneration()">
+                            <i class="bi bi-play-circle"></i> Generate Digest
+                        </button>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <button class="btn btn-outline-success w-100" onclick="testConnections()">
+                            <i class="bi bi-check-circle"></i> Test Connections
+                        </button>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('feeds') }}" class="btn btn-outline-info w-100">
+                            <i class="bi bi-rss"></i> Manage Feeds
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('settings') }}" class="btn btn-outline-warning w-100">
+                            <i class="bi bi-gear"></i> Settings
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Initialize charts
+document.addEventListener('DOMContentLoaded', function() {
+    initializeCharts();
+    startStatusUpdates();
+});
+
+function initializeCharts() {
+    // Daily Articles Chart
+    const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+    
+    // Get analytics data
+    fetch('/api/analytics')
+        .then(response => response.json())
+        .then(data => {
+            // Update Articles Today count
+            if (data.articles_today !== undefined) {
+                document.getElementById('articlesTodayCount').innerText = data.articles_today;
+            }
+            
+            // Update Broadcast count
+            if (data.broadcast_count !== undefined) {
+                document.getElementById('broadcastCount').innerText = data.broadcast_count;
+            }
+
+            if (data.daily_counts) {
+                new Chart(dailyCtx, {
+                    type: 'line',
+                    data: {
+                        labels: data.daily_counts.map(d => d.date),
+                        datasets: [{
+                            label: 'Articles',
+                            data: data.daily_counts.map(d => d.count),
+                            borderColor: 'rgb(75, 192, 192)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Feed Performance Pie Chart
+            if (data.feed_analytics) {
+                const feedCtx = document.getElementById('feedChart').getContext('2d');
+                const feedData = data.feed_analytics.slice(0, 5); // Top 5 feeds
+                
+                new Chart(feedCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: feedData.map(f => f.source_feed.split('/').pop().replace('.xml', '').replace('.rss', '')),
+                        datasets: [{
+                            data: feedData.map(f => f.article_count),
+                            backgroundColor: [
+                                '#FF6384',
+                                '#36A2EB',
+                                '#FFCE56',
+                                '#4BC0C0',
+                                '#9966FF'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            }
+        })
+        .catch(console.error);
+}
+
+function testConnections() {
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-arrow-repeat spinning"></i> Testing...';
+    btn.disabled = true;
+    
+    Promise.all([
+        fetch('/api/test_connection', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({type: 'llm'})
+        }).then(r => r.json()),
+        fetch('/api/test_connection', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({type: 'database'})
+        }).then(r => r.json())
+    ]).then(([llm, db]) => {
+        const llmStatus = llm.success ? '✅' : '❌';
+        const dbStatus = db.success ? '✅' : '❌';
+        
+        showAlert(`Connection Test Results:\nLLM: ${llmStatus}\nDatabase: ${dbStatus}`, 
+                 llm.success && db.success ? 'success' : 'warning');
+        
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }).catch(error => {
+        showAlert('Connection test failed: ' + error.message, 'danger');
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    });
+}
+</script>
+{% endblock %}

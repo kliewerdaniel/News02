@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Broadcast View{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2><i class="fas fa-broadcast-tower text-primary"></i> Broadcast View</h2>
+                <a href="{{ url_for('history') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to History
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Broadcast Info Card -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle"></i> Broadcast Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <strong>Created:</strong><br>
+                            <span class="text-muted">{{ broadcast.created_at }}</span>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Model Used:</strong><br>
+                            <span class="badge badge-info">{{ broadcast.model_used }}</span>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Articles Processed:</strong><br>
+                            <span class="badge badge-success">{{ broadcast.article_count }}</span>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Audio Available:</strong><br>
+                            {% if broadcast.audio_path %}
+                                <span class="badge badge-success">
+                                    <i class="fas fa-volume-up"></i> Yes
+                                </span>
+                            {% else %}
+                                <span class="badge badge-secondary">
+                                    <i class="fas fa-volume-mute"></i> No
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Audio Player -->
+                    {% if broadcast.audio_path %}
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <h6><i class="fas fa-play-circle"></i> Audio Playback:</h6>
+                            <audio controls class="w-100" style="max-width: 500px;">
+                                <source src="{{ url_for('api_download_file', file_type='audio', filename=broadcast.audio_path.split('/')[-1]) }}" type="audio/mpeg">
+                                Your browser does not support the audio element.
+                            </audio>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Broadcast Content -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-text"></i> Broadcast Content
+                        <div class="float-right">
+                            {% if broadcast.file_path %}
+                            <a href="{{ url_for('api_download_file', file_type='digest', filename=broadcast.file_path.split('/')[-1]) }}" 
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-download"></i> Download
+                            </a>
+                            {% endif %}
+                            <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard()">
+                                <i class="fas fa-copy"></i> Copy Text
+                            </button>
+                        </div>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="broadcast-content" style="white-space: pre-line; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6;">{{ broadcast.broadcast_text }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row mt-4 mb-4">
+        <div class="col-md-12 text-center">
+            {% if broadcast.audio_path %}
+            <a href="{{ url_for('api_download_file', file_type='audio', filename=broadcast.audio_path.split('/')[-1]) }}" 
+               class="btn btn-success mr-2">
+                <i class="fas fa-download"></i> Download Audio
+            </a>
+            {% endif %}
+            {% if broadcast.file_path %}
+            <a href="{{ url_for('api_download_file', file_type='digest', filename=broadcast.file_path.split('/')[-1]) }}" 
+               class="btn btn-primary mr-2">
+                <i class="fas fa-download"></i> Download Text
+            </a>
+            {% endif %}
+            <a href="{{ url_for('history') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to History
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyToClipboard() {
+    const content = document.getElementById('broadcast-content').innerText;
+    navigator.clipboard.writeText(content).then(function() {
+        // Show success message
+        const btn = event.target.closest('button');
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        btn.classList.remove('btn-outline-secondary');
+        btn.classList.add('btn-success');
+        
+        setTimeout(function() {
+            btn.innerHTML = originalHtml;
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-outline-secondary');
+        }, 2000);
+    }).catch(function(err) {
+        console.error('Failed to copy text: ', err);
+        alert('Failed to copy to clipboard');
+    });
+}
+</script>
+{% endblock %}
