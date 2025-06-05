@@ -1,0 +1,514 @@
+{% extends "base.html" %}
+
+{% block title %}History - News02{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Filter Controls -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="row align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label">Filter by Date</label>
+                        <input type="date" class="form-control" id="dateFilter">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Content Type</label>
+                        <select class="form-select" id="contentFilter">
+                            <option value="all">All Content</option>
+                            <option value="articles">Articles Only</option>
+                            <option value="broadcasts">Broadcasts Only</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Source Feed</label>
+                        <select class="form-select" id="sourceFilter">
+                            <option value="all">All Sources</option>
+                            {% for article in articles %}
+                                {% set source_name = article.source_feed.split('/')[-1] %}
+                                <option value="{{ article.source_feed }}">{{ source_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-primary" onclick="applyFilters()">
+                            <i class="bi bi-funnel"></i> Apply Filters
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="clearFilters()">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs for different content types -->
+<ul class="nav nav-tabs" id="historyTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="broadcasts-tab" data-bs-toggle="tab" data-bs-target="#broadcasts" 
+                type="button" role="tab">
+            <i class="bi bi-broadcast"></i> Generated Broadcasts ({{ broadcasts|length }})
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="articles-tab" data-bs-toggle="tab" data-bs-target="#articles" 
+                type="button" role="tab">
+            <i class="bi bi-newspaper"></i> Processed Articles ({{ articles|length }})
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="historyTabsContent">
+    <!-- Broadcasts Tab -->
+    <div class="tab-pane fade show active" id="broadcasts" role="tabpanel">
+        <div class="row mt-3">
+            {% if broadcasts %}
+                {% for broadcast in broadcasts %}
+                <div class="col-md-6 mb-4 broadcast-item">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">
+                                <i class="bi bi-broadcast"></i> 
+                                {{ broadcast.created_at }}
+                            </h6>
+                            <span class="badge bg-primary">{{ broadcast.article_count }} articles</span>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">
+                                <small class="text-muted">Model: {{ broadcast.model_used }}</small>
+                            </p>
+                            
+                            <!-- Preview of broadcast text -->
+                            <div class="broadcast-preview">
+                                <p class="text-muted">
+                                    {{ broadcast.broadcast_text[:200] }}
+                                    {% if broadcast.broadcast_text|length > 200 %}...{% endif %}
+                                </p>
+                            </div>
+                            
+                            <!-- Audio Player -->
+                            {% if broadcast.audio_path %}
+                            <div class="audio-player mb-3">
+                                <audio controls class="w-100">
+                                    <source src="{{ url_for('api_download_file', file_type='audio', filename=broadcast.audio_path.split('/')[-1]) }}" type="audio/mpeg">
+                                    Your browser does not support the audio element.
+                                </audio>
+                            </div>
+                            {% endif %}
+                            
+                            <div class="btn-group w-100" role="group">
+                                <a href="{{ url_for('view_broadcast', broadcast_id=broadcast.id) }}" class="btn btn-outline-primary">
+                                    <i class="bi bi-eye"></i> View Full
+                                </a>
+                                {% if broadcast.file_path %}
+                                <a href="{{ url_for('api_download_file', file_type='digest', filename=broadcast.file_path.split('/')[-1]) }}" 
+                                   class="btn btn-outline-success">
+                                    <i class="bi bi-download"></i> Download
+                                </a>
+                                {% endif %}
+                                <button class="btn btn-outline-info" onclick="shareBroadcast('{{ broadcast.id }}')">
+                                    <i class="bi bi-share"></i> Share
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12">
+                    <div class="text-center py-5">
+                        <i class="bi bi-broadcast display-1 text-muted"></i>
+                        <h3 class="text-muted">No broadcasts generated yet</h3>
+                        <p class="text-muted">Generate your first news digest to see it here.</p>
+                        <button class="btn btn-primary" onclick="startGeneration()">
+                            <i class="bi bi-play-circle"></i> Generate Digest
+                        </button>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Articles Tab -->
+    <div class="tab-pane fade" id="articles" role="tabpanel">
+        <div class="row mt-3">
+            <div class="col-12">
+                {% if articles %}
+                    <div class="table-responsive">
+                        <table class="table table-hover article-table">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Source</th>
+                                    <th>Processed</th>
+                                    <th>Model</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for article in articles %}
+                                <tr class="article-row" data-source="{{ article.source_feed }}" data-date="{{ article.fetched_at[:10] }}">
+                                    <td>
+                                        <div>
+                                            <strong>{{ article.title[:80] }}{% if article.title|length > 80 %}...{% endif %}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ article.fetched_at }}</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">
+                                            {{ article.source_feed.split('/')[-1][:20] }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if article.summary_text %}
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle"></i> Yes
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning">
+                                                <i class="bi bi-clock"></i> Pending
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if article.model_used %}
+                                            <small>{{ article.model_used }}</small>
+                                        {% else %}
+                                            <small class="text-muted">-</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button class="btn btn-outline-primary" onclick="viewArticle({{ article.id }})">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <a href="{{ article.link }}" target="_blank" class="btn btn-outline-info">
+                                                <i class="bi bi-box-arrow-up-right"></i>
+                                            </a>
+                                            {% if article.summary_text %}
+                                            <button class="btn btn-outline-success" onclick="viewSummary({{ article.id }})">
+                                                <i class="bi bi-card-text"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-newspaper display-1 text-muted"></i>
+                        <h3 class="text-muted">No articles processed yet</h3>
+                        <p class="text-muted">Process some news articles to see them here.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Broadcast View Modal -->
+<div class="modal fade" id="broadcastModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Broadcast Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="broadcastContent">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="copyBroadcast()">
+                    <i class="bi bi-clipboard"></i> Copy Text
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Article View Modal -->
+<div class="modal fade" id="articleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Article Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="articleContent">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="originalArticleBtn">
+                    <i class="bi bi-box-arrow-up-right"></i> Original Article
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default date filter to today
+    document.getElementById('dateFilter').valueAsDate = new Date();
+    
+    // Remove duplicate sources from filter
+    const sourceFilter = document.getElementById('sourceFilter');
+    const uniqueSources = new Set();
+    Array.from(sourceFilter.options).forEach(option => {
+        if (option.value !== 'all') {
+            if (uniqueSources.has(option.value)) {
+                option.remove();
+            } else {
+                uniqueSources.add(option.value);
+            }
+        }
+    });
+});
+
+function applyFilters() {
+    const dateFilter = document.getElementById('dateFilter').value;
+    const contentFilter = document.getElementById('contentFilter').value;
+    const sourceFilter = document.getElementById('sourceFilter').value;
+    
+    // Filter broadcasts
+    const broadcastItems = document.querySelectorAll('.broadcast-item');
+    broadcastItems.forEach(item => {
+        let show = true;
+        
+        if (contentFilter === 'articles') {
+            show = false;
+        }
+        
+        // Add date filtering logic here if needed
+        
+        item.style.display = show ? 'block' : 'none';
+    });
+    
+    // Filter articles
+    const articleRows = document.querySelectorAll('.article-row');
+    articleRows.forEach(row => {
+        let show = true;
+        
+        if (contentFilter === 'broadcasts') {
+            show = false;
+        }
+        
+        if (dateFilter) {
+            const rowDate = row.getAttribute('data-date');
+            if (rowDate !== dateFilter) {
+                show = false;
+            }
+        }
+        
+        if (sourceFilter !== 'all') {
+            const rowSource = row.getAttribute('data-source');
+            if (rowSource !== sourceFilter) {
+                show = false;
+            }
+        }
+        
+        row.style.display = show ? 'table-row' : 'none';
+    });
+    
+    // Switch to appropriate tab
+    if (contentFilter === 'articles') {
+        document.getElementById('articles-tab').click();
+    } else if (contentFilter === 'broadcasts') {
+        document.getElementById('broadcasts-tab').click();
+    }
+}
+
+function clearFilters() {
+    document.getElementById('dateFilter').value = '';
+    document.getElementById('contentFilter').value = 'all';
+    document.getElementById('sourceFilter').value = 'all';
+    
+    // Show all items
+    document.querySelectorAll('.broadcast-item, .article-row').forEach(item => {
+        item.style.display = item.classList.contains('broadcast-item') ? 'block' : 'table-row';
+    });
+}
+
+function viewBroadcast(broadcastId) {
+    // Find broadcast data (in a real app, this would be an API call)
+    const broadcastData = {{ broadcasts|tojson|safe }}.find(b => b.id === broadcastId);
+    
+    if (broadcastData) {
+        document.getElementById('broadcastContent').innerHTML = `
+            <div class="mb-3">
+                <h6>Generated: ${broadcastData.created_at}</h6>
+                <p><strong>Model:</strong> ${broadcastData.model_used}</p>
+                <p><strong>Articles:</strong> ${broadcastData.article_count}</p>
+            </div>
+            <div class="border-top pt-3">
+                <h6>Broadcast Script:</h6>
+                <div class="bg-light p-3 rounded">
+                    <pre class="mb-0" style="white-space: pre-wrap;">${broadcastData.broadcast_text}</pre>
+                </div>
+            </div>
+        `;
+        
+        const modal = new bootstrap.Modal(document.getElementById('broadcastModal'));
+        modal.show();
+    }
+}
+
+function viewArticle(articleId) {
+    // Find article data
+    const articleData = {{ articles|tojson|safe }}.find(a => a.id === articleId);
+    
+    if (articleData) {
+        document.getElementById('articleContent').innerHTML = `
+            <div class="mb-3">
+                <h5>${articleData.title}</h5>
+                <p class="text-muted">
+                    <strong>Source:</strong> ${articleData.source_feed}<br>
+                    <strong>Published:</strong> ${articleData.published_date}<br>
+                    <strong>Fetched:</strong> ${articleData.fetched_at}
+                </p>
+            </div>
+            
+            ${articleData.summary_text ? `
+            <div class="mb-3">
+                <h6>AI Summary:</h6>
+                <div class="bg-success bg-opacity-10 p-3 rounded">
+                    <p class="mb-0">${articleData.summary_text}</p>
+                    <small class="text-muted">Generated by: ${articleData.model_used}</small>
+                </div>
+            </div>
+            ` : ''}
+            
+            ${articleData.content ? `
+            <div class="mb-3">
+                <h6>Content Preview:</h6>
+                <div class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto;">
+                    <p>${articleData.content}</p>
+                </div>
+            </div>
+            ` : ''}
+        `;
+        
+        // Set up original article button
+        document.getElementById('originalArticleBtn').onclick = () => {
+            window.open(articleData.link, '_blank');
+        };
+        
+        const modal = new bootstrap.Modal(document.getElementById('articleModal'));
+        modal.show();
+    }
+}
+
+function viewSummary(articleId) {
+    // This would show just the summary in a smaller modal
+    viewArticle(articleId);
+}
+
+function shareBroadcast(broadcastId) {
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    
+    if (isLocalhost) {
+        // For localhost: copy the broadcast text content
+        const broadcastData = {{ broadcasts|tojson|safe }}.find(b => b.id == broadcastId);
+        
+        if (broadcastData) {
+            const textToCopy = `News Digest - ${broadcastData.created_at}\n\n${broadcastData.broadcast_text}`;
+            
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                showShareSuccess('Text Copied!');
+            }).catch(err => {
+                console.error('Failed to copy text:', err);
+                window.open('/broadcast/' + broadcastId, '_blank');
+            });
+        } else {
+            window.open('/broadcast/' + broadcastId, '_blank');
+        }
+    } else {
+        // For production: share the actual URL
+        const shareUrl = `${window.location.origin}/broadcast/${broadcastId}`;
+        
+        if (navigator.share) {
+            navigator.share({
+                title: 'News Digest',
+                text: 'Check out this news digest',
+                url: shareUrl
+            }).catch(err => {
+                // Fallback to copying URL
+                copyShareUrl(shareUrl);
+            });
+        } else {
+            copyShareUrl(shareUrl);
+        }
+    }
+}
+
+function copyShareUrl(url) {
+    navigator.clipboard.writeText(url).then(() => {
+        showShareSuccess('Link Copied!');
+    }).catch(err => {
+        console.error('Failed to copy URL:', err);
+        alert('Share URL: ' + url);
+    });
+}
+
+function showShareSuccess(message) {
+    const btn = event.target.closest('button');
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = `<i class="bi bi-check"></i> ${message}`;
+    btn.classList.remove('btn-outline-info');
+    btn.classList.add('btn-success');
+    
+    setTimeout(() => {
+        btn.innerHTML = originalHtml;
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-outline-info');
+    }, 2000);
+}
+
+function copyBroadcast() {
+    const content = document.querySelector('#broadcastContent pre');
+    if (content) {
+        navigator.clipboard.writeText(content.textContent).then(() => {
+            showAlert('Broadcast copied to clipboard!', 'success');
+        });
+    }
+}
+
+// Search functionality
+function searchContent(query) {
+    const searchTerm = query.toLowerCase();
+    
+    // Search broadcasts
+    document.querySelectorAll('.broadcast-item').forEach(item => {
+        const text = item.textContent.toLowerCase();
+        item.style.display = text.includes(searchTerm) ? 'block' : 'none';
+    });
+    
+    // Search articles
+    document.querySelectorAll('.article-row').forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(searchTerm) ? 'table-row' : 'none';
+    });
+}
+
+// Add search box if needed
+document.addEventListener('DOMContentLoaded', function() {
+    // You could add a search input here
+});
+</script>
+{% endblock %}

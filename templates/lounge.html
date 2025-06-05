@@ -1,0 +1,511 @@
+{% extends "base.html" %}
+
+{% block title %}Lounge - News02{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="bi bi-headphones"></i> News Lounge</h2>
+            <small class="text-muted">Relax and enjoy your generated news digests</small>
+        </div>
+    </div>
+</div>
+
+{% if digest_files %}
+<div class="row">
+    <!-- Content List -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-list"></i> Recent Digests
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for digest in digest_files %}
+                    <div class="list-group-item list-group-item-action digest-item" 
+                         data-index="{{ loop.index0 }}"
+                         onclick="loadDigest({{ loop.index0 }})">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">
+                                <i class="bi bi-file-text text-primary"></i>
+                                Digest {{ digest.created | timestamp_to_date }}
+                            </h6>
+                            <small>{{ digest.size | filesizeformat }}</small>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            {% if digest.has_audio %}
+                            <span class="badge bg-success me-2">
+                                <i class="bi bi-volume-up"></i> Audio
+                            </span>
+                            {% endif %}
+                            <small class="text-muted">
+                                {{ digest.created | timestamp_to_time }}
+                            </small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content Viewer -->
+    <div class="col-md-8">
+        <!-- Audio Player Card -->
+        <div class="card mb-3" id="audioCard" style="display: none;">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-play-circle"></i> Audio Player
+                </h5>
+            </div>
+            <div class="card-body">
+                <audio id="audioPlayer" controls class="w-100 mb-3" style="display: none;">
+                    Your browser does not support the audio element.
+                </audio>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <button class="btn btn-outline-primary btn-sm" onclick="downloadAudio()">
+                            <i class="bi bi-download"></i> Download Audio
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="toggleReadingMode()">
+                            <i class="bi bi-eye"></i> Reading Mode
+                        </button>
+                    </div>
+                    <div>
+                        <button class="btn btn-outline-info btn-sm me-2" onclick="showSources()" id="sourcesBtn" style="display: none;">
+                            <i class="bi bi-list-ul"></i> Sources
+                        </button>
+                        <button class="btn btn-outline-success btn-sm" onclick="showFullContent()">
+                            <i class="bi bi-arrows-fullscreen"></i> Full View
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Display Card -->
+        <div class="card" id="contentCard">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-file-text"></i> <span id="contentTitle">Select a digest to view</span>
+                </h5>
+                <div class="btn-group" role="group">
+                    <button class="btn btn-outline-primary btn-sm" onclick="downloadText()" id="downloadTextBtn" style="display: none;">
+                        <i class="bi bi-download"></i> Download
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="copyContent()" id="copyBtn" style="display: none;">
+                        <i class="bi bi-clipboard"></i> Copy
+                    </button>
+                </div>
+            </div>
+            <div class="card-body" id="contentBody" style="min-height: 400px;">
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-arrow-left display-4"></i>
+                    <p class="mt-3">Choose a digest from the list to start reading</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Content Modal for Full View -->
+<div class="modal fade" id="contentModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-file-text"></i> <span id="modalTitle">Full Content View</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modalContent" style="max-height: 70vh; overflow-y: auto;">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="downloadText()">
+                    <i class="bi bi-download"></i> Download
+                </button>
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sources Modal -->
+<div class="modal fade" id="sourcesModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-list-ul"></i> Article Sources
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="sourcesContent">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- No Content State -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-file-text display-1 text-muted"></i>
+                <h4 class="mt-3">No Digests Available</h4>
+                <p class="text-muted mb-4">Generate your first news digest to get started</p>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+                    <i class="bi bi-play-circle"></i> Generate Digest
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Hidden data for JavaScript -->
+<script type="application/json" id="digestData">
+{{ digest_files | tojson }}
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Global variables
+let digestData = [];
+let currentDigest = null;
+let isReadingMode = false;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Load digest data
+    const dataElement = document.getElementById('digestData');
+    if (dataElement) {
+        try {
+            digestData = JSON.parse(dataElement.textContent);
+            if (digestData.length > 0) {
+                loadDigest(0); // Load first digest by default
+            }
+        } catch (e) {
+            console.error('Error loading digest data:', e);
+        }
+    }
+});
+
+function loadDigest(index) {
+    if (index >= digestData.length) return;
+    
+    currentDigest = digestData[index];
+    
+    // Update active item in list
+    document.querySelectorAll('.digest-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    document.querySelector(`[data-index="${index}"]`).classList.add('active');
+    
+    // Load content
+    loadContent();
+    
+    // Load audio if available
+    if (currentDigest.has_audio) {
+        loadAudio();
+    } else {
+        hideAudio();
+    }
+}
+
+function loadContent() {
+    if (!currentDigest) return;
+    
+    const contentTitle = document.getElementById('contentTitle');
+    const contentBody = document.getElementById('contentBody');
+    const downloadTextBtn = document.getElementById('downloadTextBtn');
+    const copyBtn = document.getElementById('copyBtn');
+    const sourcesBtn = document.getElementById('sourcesBtn');
+    
+    // Update title
+    const date = new Date(currentDigest.created * 1000).toLocaleDateString();
+    contentTitle.textContent = `News Digest - ${date}`;
+    
+    // Process and display content
+    const formattedContent = formatMarkdownContent(currentDigest.content);
+    contentBody.innerHTML = formattedContent;
+    
+    // Show action buttons
+    downloadTextBtn.style.display = 'inline-block';
+    copyBtn.style.display = 'inline-block';
+    
+    // Show sources button if sources are available
+    if (currentDigest.sources && currentDigest.sources.length > 0) {
+        sourcesBtn.style.display = 'inline-block';
+    } else {
+        sourcesBtn.style.display = 'none';
+    }
+}
+
+function loadAudio() {
+    if (!currentDigest || !currentDigest.has_audio) return;
+    
+    const audioCard = document.getElementById('audioCard');
+    const audioPlayer = document.getElementById('audioPlayer');
+    
+    audioPlayer.src = `/api/download/audio/${currentDigest.audio_filename}`;
+    audioPlayer.style.display = 'block';
+    audioCard.style.display = 'block';
+    
+    // Auto-play functionality (optional)
+    audioPlayer.addEventListener('loadeddata', function() {
+        // Uncomment to auto-play
+        // audioPlayer.play();
+    });
+}
+
+function hideAudio() {
+    const audioCard = document.getElementById('audioCard');
+    const audioPlayer = document.getElementById('audioPlayer');
+    
+    audioPlayer.pause();
+    audioPlayer.src = '';
+    audioCard.style.display = 'none';
+}
+
+function formatMarkdownContent(content) {
+    // Basic markdown to HTML conversion for better readability
+    let formatted = content
+        .replace(/^# (.*$)/gim, '<h1 class="text-primary mb-3">$1</h1>')
+        .replace(/^## (.*$)/gim, '<h2 class="text-secondary mb-3">$1</h2>')
+        .replace(/^### (.*$)/gim, '<h3 class="mb-2">$1</h3>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/\n\n/g, '</p><p class="mb-3">')
+        .replace(/\n/g, '<br>');
+    
+    return `<div class="content-text">${formatted}</div>`;
+}
+
+function toggleReadingMode() {
+    const contentBody = document.getElementById('contentBody');
+    isReadingMode = !isReadingMode;
+    
+    if (isReadingMode) {
+        contentBody.classList.add('reading-mode');
+        document.querySelector('[onclick="toggleReadingMode()"]').innerHTML = 
+            '<i class="bi bi-eye-slash"></i> Normal Mode';
+    } else {
+        contentBody.classList.remove('reading-mode');
+        document.querySelector('[onclick="toggleReadingMode()"]').innerHTML = 
+            '<i class="bi bi-eye"></i> Reading Mode';
+    }
+}
+
+function showFullContent() {
+    if (!currentDigest) return;
+    
+    const modal = new bootstrap.Modal(document.getElementById('contentModal'));
+    const modalTitle = document.getElementById('modalTitle');
+    const modalContent = document.getElementById('modalContent');
+    
+    const date = new Date(currentDigest.created * 1000).toLocaleDateString();
+    modalTitle.textContent = `News Digest - ${date}`;
+    modalContent.innerHTML = formatMarkdownContent(currentDigest.content);
+    
+    modal.show();
+}
+
+function downloadText() {
+    if (!currentDigest) return;
+    
+    const blob = new Blob([currentDigest.content], { type: 'text/markdown' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = currentDigest.filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    showAlert('Download started!', 'success');
+}
+
+function downloadAudio() {
+    if (!currentDigest || !currentDigest.has_audio) return;
+    
+    const a = document.createElement('a');
+    a.href = `/api/download/audio/${currentDigest.audio_filename}`;
+    a.download = currentDigest.audio_filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    
+    showAlert('Audio download started!', 'success');
+}
+
+function copyContent() {
+    if (!currentDigest) return;
+    
+    navigator.clipboard.writeText(currentDigest.content).then(() => {
+        showAlert('Content copied to clipboard!', 'success');
+    }).catch(err => {
+        showAlert('Failed to copy content', 'danger');
+    });
+}
+
+function showSources() {
+    if (!currentDigest || !currentDigest.sources) return;
+    
+    const modal = new bootstrap.Modal(document.getElementById('sourcesModal'));
+    const sourcesContent = document.getElementById('sourcesContent');
+    
+    let html = '';
+    
+    if (currentDigest.sources.length === 0) {
+        html = '<p class="text-muted">No sources found for this digest.</p>';
+    } else {
+        html = '<div class="list-group">';
+        
+        currentDigest.sources.forEach((source, index) => {
+            const sourceIcon = getSourceIcon(source.source);
+            const sourceTitle = source.title || 'Untitled Article';
+            const sourceDomain = source.source || 'Unknown Source';
+            
+            html += `
+                <div class="list-group-item">
+                    <div class="d-flex w-100 justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">
+                                <i class="bi ${sourceIcon} text-primary me-2"></i>
+                                ${sourceTitle}
+                            </h6>
+                            <p class="mb-1 text-muted small">${sourceDomain}</p>
+                        </div>
+                        <div class="btn-group-vertical btn-group-sm" role="group">
+                            ${source.url ? `
+                                <a href="${source.url}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-box-arrow-up-right"></i> View
+                                </a>
+                            ` : ''}
+                            <button class="btn btn-outline-secondary btn-sm" onclick="copySourceUrl('${source.url || ''}')">
+                                <i class="bi bi-clipboard"></i> Copy
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        
+        // Add summary
+        html += `
+            <div class="mt-3 p-3 bg-light rounded">
+                <small class="text-muted">
+                    <i class="bi bi-info-circle"></i>
+                    This digest contains ${currentDigest.sources.length} article${currentDigest.sources.length !== 1 ? 's' : ''}
+                    from ${[...new Set(currentDigest.sources.map(s => s.source))].length} source${[...new Set(currentDigest.sources.map(s => s.source))].length !== 1 ? 's' : ''}.
+                </small>
+            </div>
+        `;
+    }
+    
+    sourcesContent.innerHTML = html;
+    modal.show();
+}
+
+function getSourceIcon(source) {
+    if (!source) return 'bi-globe';
+    
+    const domain = source.toLowerCase();
+    if (domain.includes('bbc')) return 'bi-broadcast';
+    if (domain.includes('techcrunch')) return 'bi-laptop';
+    if (domain.includes('guardian')) return 'bi-newspaper';
+    if (domain.includes('reuters')) return 'bi-globe-americas';
+    if (domain.includes('cnn')) return 'bi-tv';
+    if (domain.includes('wired')) return 'bi-cpu';
+    if (domain.includes('ars')) return 'bi-gear';
+    if (domain.includes('npr')) return 'bi-mic';
+    if (domain.includes('marketwatch') || domain.includes('fortune')) return 'bi-graph-up';
+    if (domain.includes('venturebeat')) return 'bi-rocket';
+    if (domain.includes('hackernews')) return 'bi-shield-check';
+    
+    return 'bi-globe';
+}
+
+function copySourceUrl(url) {
+    if (!url) {
+        showAlert('No URL to copy', 'warning');
+        return;
+    }
+    
+    navigator.clipboard.writeText(url).then(() => {
+        showAlert('URL copied to clipboard!', 'success');
+    }).catch(err => {
+        showAlert('Failed to copy URL', 'danger');
+    });
+}
+</script>
+
+<style>
+.digest-item {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.digest-item:hover {
+    background-color: rgba(13, 110, 253, 0.1);
+}
+
+.digest-item.active {
+    background-color: rgba(13, 110, 253, 0.2);
+    border-left: 4px solid #0d6efd;
+}
+
+.content-text {
+    line-height: 1.6;
+    font-size: 1rem;
+}
+
+.reading-mode {
+    font-size: 1.1rem !important;
+    line-height: 1.8 !important;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+    background-color: #f8f9fa;
+    border-radius: 0.5rem;
+}
+
+.reading-mode h1, .reading-mode h2, .reading-mode h3 {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+}
+
+audio {
+    border-radius: 0.375rem;
+}
+
+#audioCard {
+    border-left: 4px solid #0d6efd;
+}
+
+.content-text p {
+    margin-bottom: 1rem;
+}
+
+.content-text h1 {
+    border-bottom: 2px solid #0d6efd;
+    padding-bottom: 0.5rem;
+}
+
+.content-text h2 {
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 0.25rem;
+}
+</style>
+{% endblock %}
