@@ -1,5 +1,6 @@
 Update Notes 6/6/2025:
 - Trying to completely seperate Web and Jobs servers, and fix logic on web to not crash when a job is completed sometimes. Additionally because they will now be seperated in an incoming update, the user will be able to turn off the webserver and only run the job and api servers. Additionally looking into API server adding some security logic. Still recommend if you do post it publicly to put it behind a proxy with SSL, and some security servers to avoid malicious probing.
+- Additionally working on an apk proof-of-concept android app to mimmick the lounge page look for a client connecting and using the API server remotely.
 
 Update Notes 6/5/2025:
 - Added API server, and fixed jobs by adding an additional jobs server that will check forjobs to do every 10 minutes. This is officially finished the first full version of features, and here on will just be refactoring, optimizing, and fixing bugs.
