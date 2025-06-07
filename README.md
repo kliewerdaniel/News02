@@ -1,3 +1,13 @@
+Update Notes 6/7/2025:
+- Finished first draft of the remote client. Added some mobile view functionality, and testing building for Android APK.
+<div style="display: flex; justify-content: space-around; align-items: flex-start;">
+  <img src="https://github.com/user-attachments/assets/81da4da7-4f87-4b0a-81d9-489075ab2093" alt="Screenshot 1" width="300">
+  <img src="https://github.com/user-attachments/assets/2ff9b741-64a9-4e68-a017-a98f29c7517f" alt="Screenshot 2" width="300">
+  <img src="https://github.com/user-attachments/assets/b1ce7e1a-b5f5-4862-9288-73640df59304" alt="Screenshot 3" width="300">
+</div>
+
+
+
 Update Notes 6/6/2025:
 - Trying to completely seperate Web and Jobs servers, and fix logic on web to not crash when a job is completed sometimes. Additionally because they will now be seperated in an incoming update, the user will be able to turn off the webserver and only run the job and api servers. Additionally looking into API server adding some security logic. Still recommend if you do post it publicly to put it behind a proxy with SSL, and some security servers to avoid malicious probing.
 - Additionally working on an apk proof-of-concept android app to mimmick the lounge page look for a client connecting and using the API server remotely.
