@@ -37,7 +37,7 @@ All endpoints require the `X-API-Key` header with your generated API key.
 
 ### Base URL
 ```
-http://your-server:5000/api/remote/
+http://your-server:7855/api/remote/
 ```
 
 ### Authentication Test
@@ -208,7 +208,7 @@ Response: Binary MP3 file download
 import requests
 
 API_KEY = "your-api-key-here"
-BASE_URL = "http://localhost:5000"
+BASE_URL = "http://localhost:7855"
 
 headers = {
     "X-API-Key": API_KEY,
@@ -253,31 +253,31 @@ print(f"Technology profile has {profile_digests['total_available']} digests")
 ### cURL Examples
 ```bash
 # Test authentication
-curl -X POST "http://localhost:5000/api/remote/auth" \
+curl -X POST "http://localhost:7855/api/remote/auth" \
      -H "X-API-Key: your-api-key-here"
 
 # Get server stats
-curl "http://localhost:5000/api/remote/stats" \
+curl "http://localhost:7855/api/remote/stats" \
      -H "X-API-Key: your-api-key-here"
 
 # Get available RSS profiles
-curl "http://localhost:5000/api/remote/profiles" \
+curl "http://localhost:7855/api/remote/profiles" \
      -H "X-API-Key: your-api-key-here"
 
 # Get 3 newest digests (all profiles)
-curl "http://localhost:5000/api/remote/digests?limit=3&order=newest" \
+curl "http://localhost:7855/api/remote/digests?limit=3&order=newest" \
      -H "X-API-Key: your-api-key-here"
 
 # Get Technology digests only
-curl "http://localhost:5000/api/remote/digests?limit=3&profile=Technology" \
+curl "http://localhost:7855/api/remote/digests?limit=3&profile=Technology" \
      -H "X-API-Key: your-api-key-here"
 
 # Get Technology digests using dedicated endpoint
-curl "http://localhost:5000/api/remote/profiles/Technology/digests?limit=5" \
+curl "http://localhost:7855/api/remote/profiles/Technology/digests?limit=5" \
      -H "X-API-Key: your-api-key-here"
 
 # Download audio file
-curl "http://localhost:5000/api/remote/digest/digest_2025-06-05_09-30-15/audio" \
+curl "http://localhost:7855/api/remote/digest/digest_2025-06-05_09-30-15/audio" \
      -H "X-API-Key: your-api-key-here" \
      -o "digest_2025-06-05_09-30-15.mp3"
 ```
