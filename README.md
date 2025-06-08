@@ -58,47 +58,13 @@ After launching the servers, open your web browser and navigate to `http://127.0
 
 News02 offers a rich set of features designed for a professional news digest experience:
 
-### 🤖 Multi-Provider LLM Support with Smart Rate Limiting
--   Integrates with **Ollama** (for local inference), **OpenAI-Compatible** APIs (vLLM, LocalAI), and **Google Gemini** (cloud-based).
--   **Automatic Rate Management** prevents `429` errors with intelligent delays, optimizing usage for free tiers.
-
-### 🌐 Comprehensive Web Interface (WebGUI)
--   **Real-time Dashboard**: Monitor digest generation progress and system statistics.
--   **News Lounge**: A comfortable interface for viewing and listening to generated digests.
--   **Feed Management**: Easily add, test, and organize RSS feeds with built-in reliability testing.
--   **Settings Panel**: Configure LLM providers, API keys, and other system preferences with live connection testing.
--   **Mobile Responsive**: Optimized for seamless use across phones, tablets, and desktops.
-
-### ⚙️ Automated Job Scheduling
--   **Jobs Page**: Schedule automated digest generations based on RSS profiles.
--   **Flexible Scheduling**: Set daily, weekday, weekend, or one-time jobs with precise timing.
--   **Customizable Output**: Define specific LLM models and article limits for each scheduled job.
--   **Queue Management**: Ensures efficient processing with conflict prevention and real-time status updates.
-
-### 💾 Robust Database Management
--   **SQLite Storage**: Persistently stores articles, summaries, and generated digests.
--   **Real-time Analytics**: Provides insights into feed performance and processing statistics.
--   **Smart Deduplication**: Avoids reprocessing duplicate articles.
--   **History Tracking**: Browse and access past digests and summaries.
--   **Database Tools**: Options to reset, clean up, or wipe the database.
-
-### 🎵 Audio Generation (TTS)
--   **Text-to-Speech**: Generates high-quality audio narration using multiple voice options via Microsoft Edge TTS.
--   **News Anchor Style**: Formats broadcasts professionally with transitions.
--   **Integrated Audio Player**: Play generated content directly within the web interface.
--   **Download Options**: Save MP3 audio files locally.
-
-### 📋 Complete Source Transparency
--   **Detailed Article Sources**: Tracks individual articles with titles and original URLs.
--   **Source Statistics**: Provides counts like "X articles from Y sources."
--   **Clickable Sources**: Direct links to original articles for verification.
--   **Copy Functionality**: Easily copy URLs for sharing.
-
-### 🔍 Advanced RSS Feed Discovery
--   **300+ Curated Feeds**: Automatically cloned from the `awesome-rss-feeds` repository.
--   **Smart Search & Filters**: Find feeds by topic, keyword, category, or country (e.g., English-only, US, UK).
--   **One-Click Adding**: Test and add feeds directly to your collection.
--   **Live Feed Testing**: Verify feed functionality before adding.
+#### 🤖 Multi-Provider LLM Support with Smart Rate Limiting
+#### 🌐 Comprehensive Web Interface (WebGUI)
+#### ⚙️ Automated Job Scheduling
+#### 💾 Robust Database Management
+#### 🎵 Audio Generation (TTS)
+#### 📋 Complete Source Transparency
+#### 🔍 Advanced RSS Feed Discovery
 
 ## 🔧 Configuration
 
