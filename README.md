@@ -1,3 +1,9 @@
+Update Notes 6/10/2025:
+- Not implemented yet (Coming soon):
+  - Mobile client (Going to be a different repo added later you can test with)
+  - fixing the api server
+  - fixing the web server when jobs are finished
+ 
 Update Notes 6/7/2025:
 - Finished first draft of the remote client. Added some mobile view functionality, and testing building for Android APK.
 <div style="display: flex; justify-content: space-around; align-items: flex-start;">
